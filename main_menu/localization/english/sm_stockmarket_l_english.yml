@@ -8,7 +8,7 @@
  SM_EXCHANGE_TITLE: "Investments"
  SM_LEDGER_TITLE: "Foreign Investments"
  SM_LEDGER_HINT: "Investments are made and liquidated through diplomatic actions. Returns are paid on the 1st of each month."
- SM_COL_COUNTRY: "Country"
+ SM_COL_COUNTRY: "       Country" #adjustment to get the country header to line up with country column
  SM_SEC_AGRICULTURE: "Agriculture"
  SM_SEC_MINING: "Mining"
  SM_SEC_INDUSTRY: "Industry"

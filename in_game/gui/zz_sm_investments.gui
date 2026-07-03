@@ -171,42 +171,94 @@ type sm_ledger_content = vbox {
 		size = { -1 56 }
 		using = bg_card_header_01_economy
 
-		hbox = {
+		widget = {
 		position = { 18 6 }
-		size = { 514 44 }
-		spacing = 4
+		size = { 540 44 }
 
-		text_single = {
-			size = { 178 40 }
-			align = left|nobaseline
-			text = "SM_COL_COUNTRY"
-			default_format = "#yellow_titles"
-			fontsize = 14
+		widget = {
+			position = { 0 0 }
+			size = { 118 44 }
+			text_single = {
+				size = { 118 40 }
+				position = { 0 11 }
+				align = left|nobaseline
+				text = "SM_COL_COUNTRY"
+				default_format = "#yellow_titles"
+				fontsize = 16
+			}
 		}
 
-		vbox = {
+		widget = {
+			position = { 139 0 }
 			size = { 80 44 }
-			spacing = 2
-			icon = { size = { 22 22 } texture = "gfx/interface/icons/trade_goods/icon_goods_wheat.dds" }
-			text_single = { size = { 78 14 } align = center|nobaseline text = "SM_SEC_AGRICULTURE" fontsize = 12 }
+			icon = {
+				size = { 22 22 }
+				parentanchor = hcenter|top
+				widgetanchor = hcenter|top
+				texture = "gfx/interface/icons/trade_goods/icon_goods_wheat.dds"
+			}
+			text_single = {
+				size = { 80 14 }
+				parentanchor = hcenter|bottom
+				widgetanchor = hcenter|bottom
+				align = center|nobaseline
+				text = "SM_SEC_AGRICULTURE"
+				fontsize = 12
+			}
 		}
-		vbox = {
+		widget = {
+			position = { 246 0 }
 			size = { 80 44 }
-			spacing = 2
-			icon = { size = { 22 22 } texture = "gfx/interface/icons/trade_goods/icon_goods_iron.dds" }
-			text_single = { size = { 78 14 } align = center|nobaseline text = "SM_SEC_MINING" fontsize = 12 }
+			icon = {
+				size = { 22 22 }
+				parentanchor = hcenter|top
+				widgetanchor = hcenter|top
+				texture = "gfx/interface/icons/trade_goods/icon_goods_iron.dds"
+			}
+			text_single = {
+				size = { 80 14 }
+				parentanchor = hcenter|bottom
+				widgetanchor = hcenter|bottom
+				align = center|nobaseline
+				text = "SM_SEC_MINING"
+				fontsize = 12
+			}
 		}
-		vbox = {
+		widget = {
+			position = { 353 0 }
 			size = { 80 44 }
-			spacing = 2
-			icon = { size = { 22 22 } texture = "gfx/interface/icons/trade_goods/icon_goods_tools.dds" }
-			text_single = { size = { 78 14 } align = center|nobaseline text = "SM_SEC_INDUSTRY" fontsize = 12 }
+			icon = {
+				size = { 22 22 }
+				parentanchor = hcenter|top
+				widgetanchor = hcenter|top
+				texture = "gfx/interface/icons/trade_goods/icon_goods_tools.dds"
+			}
+			text_single = {
+				size = { 80 14 }
+				parentanchor = hcenter|bottom
+				widgetanchor = hcenter|bottom
+				align = center|nobaseline
+				text = "SM_SEC_INDUSTRY"
+				fontsize = 12
+			}
 		}
-		vbox = {
+		widget = {
+			position = { 459 0 }
 			size = { 80 44 }
-			spacing = 2
-			icon = { size = { 22 22 } texture = "gfx/interface/icons/building_categories/trade_category.dds" }
-			text_single = { size = { 78 14 } align = center|nobaseline text = "SM_SEC_COMMERCE" fontsize = 12 }
+			icon = {
+				size = { 22 22 }
+				parentanchor = hcenter|top
+				widgetanchor = hcenter|top
+				texture = "gfx/interface/icons/building_categories/trade_category.dds"
+			}
+			text_single = {
+				size = { 80 14 }
+				parentanchor = hcenter|bottom
+				widgetanchor = hcenter|bottom
+				align = center|nobaseline
+				text = "SM_SEC_COMMERCE"
+				fontsize = 12
+			}
 		}
 		}
 	}
