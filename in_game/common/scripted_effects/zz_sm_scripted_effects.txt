@@ -1,0 +1,119 @@
+# The Stock Exchange — shared effects.
+
+# Recompute the cached portfolio totals shown in the Investments window
+# header. Scope: the investor country. Walks the investor's
+# sm_investment_targets list and totals, per sector they own there:
+#   income = book x stake_pct x 0.006  (same formula as the dividend
+#            script values and the monthly payout — keep in sync)
+#   value  = cached market value x stake_pct (what the holdings are
+#            worth at current market conditions)
+# Reads only the target's cached vars (sm_X_book / sm_X_value, written
+# by its monthly pulse), so this is cheap: no location iteration. Called
+# from the monthly pulse and from every buy/sell interaction so the
+# header never lags a purchase.
+# prev inside every_in_list = the investor (the effect's caller scope).
+sm_refresh_portfolio_totals = {
+	set_variable = { name = sm_portfolio_income value = 0 }
+	set_variable = { name = sm_portfolio_value value = 0 }
+	every_in_list = {
+		variable = sm_investment_targets
+		save_temporary_scope_as = sm_pf_target
+
+		if = {
+			limit = {
+				var:sm_agriculture_stake_owner ?= prev
+				exists = var:sm_agriculture_book
+				exists = var:sm_agriculture_value
+			}
+			prev = {
+				change_variable = {
+					name = sm_portfolio_income
+					add = {
+						value = scope:sm_pf_target.var:sm_agriculture_book
+						multiply = scope:sm_pf_target.var:sm_agriculture_stake_pct
+						multiply = 0.006
+					}
+				}
+				change_variable = {
+					name = sm_portfolio_value
+					add = {
+						value = scope:sm_pf_target.var:sm_agriculture_value
+						multiply = scope:sm_pf_target.var:sm_agriculture_stake_pct
+					}
+				}
+			}
+		}
+		if = {
+			limit = {
+				var:sm_mining_stake_owner ?= prev
+				exists = var:sm_mining_book
+				exists = var:sm_mining_value
+			}
+			prev = {
+				change_variable = {
+					name = sm_portfolio_income
+					add = {
+						value = scope:sm_pf_target.var:sm_mining_book
+						multiply = scope:sm_pf_target.var:sm_mining_stake_pct
+						multiply = 0.006
+					}
+				}
+				change_variable = {
+					name = sm_portfolio_value
+					add = {
+						value = scope:sm_pf_target.var:sm_mining_value
+						multiply = scope:sm_pf_target.var:sm_mining_stake_pct
+					}
+				}
+			}
+		}
+		if = {
+			limit = {
+				var:sm_industry_stake_owner ?= prev
+				exists = var:sm_industry_book
+				exists = var:sm_industry_value
+			}
+			prev = {
+				change_variable = {
+					name = sm_portfolio_income
+					add = {
+						value = scope:sm_pf_target.var:sm_industry_book
+						multiply = scope:sm_pf_target.var:sm_industry_stake_pct
+						multiply = 0.006
+					}
+				}
+				change_variable = {
+					name = sm_portfolio_value
+					add = {
+						value = scope:sm_pf_target.var:sm_industry_value
+						multiply = scope:sm_pf_target.var:sm_industry_stake_pct
+					}
+				}
+			}
+		}
+		if = {
+			limit = {
+				var:sm_commerce_stake_owner ?= prev
+				exists = var:sm_commerce_book
+				exists = var:sm_commerce_value
+			}
+			prev = {
+				change_variable = {
+					name = sm_portfolio_income
+					add = {
+						value = scope:sm_pf_target.var:sm_commerce_book
+						multiply = scope:sm_pf_target.var:sm_commerce_stake_pct
+						multiply = 0.006
+					}
+				}
+				change_variable = {
+					name = sm_portfolio_value
+					add = {
+						value = scope:sm_pf_target.var:sm_commerce_value
+						multiply = scope:sm_pf_target.var:sm_commerce_stake_pct
+					}
+				}
+			}
+		}
+	}
+}

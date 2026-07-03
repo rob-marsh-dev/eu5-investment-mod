@@ -1,0 +1,689 @@
+# ======================================================================
+# Investments (rob.stockmarket) — all GUI types for the mod.
+#
+# This file is NEW (no vanilla counterpart), so it can never conflict
+# with another mod or break on a patch. The two vanilla overrides each
+# instantiate ONE of these types on ONE fenced line:
+#   gui/ingame_topbar.gui              -> sm_stock_ledger = {}
+#   gui/panels/left_panel/left_panel.gui -> sm_investments_tab = {}
+# Types and templates are global across .gui files (vanilla precedent:
+# shared/windows.gui uses lateralview_full_margins defined in
+# ingame_topbar.gui), so the vanilla templates referenced here resolve.
+#
+# All display reads sm_gui_* script values (cached monthly variables) —
+# no location iteration per frame. Buying and selling happens through
+# the diplomatic actions, not here.
+# ======================================================================
+
+types sm_investments_types
+{
+
+# The left-bar tab: same button type as the eight vanilla tabs, so it
+# inherits their look and layout. Instantiated inside the tab hbox in
+# the left_panel.gui override.
+#
+# NOTE (tested 2026-07-03): registering a native lateral view from a
+# mod is IMPOSSIBLE — a new <name>_lateralview.gui file does not
+# register, ToggleLateralView('name') on an unregistered name does
+# nothing, and IsLateralViewOpened('name') spams
+# LateralViewManager::IsViewOpen errors per frame. The view-name
+# registry is C++. Hence the widget-based ledger below.
+type sm_investments_tab = button_panel_tab_alt {
+	down = "[GetVariableSystem.Exists('sm_exchange_open')]"
+	onmousehierarchyenter = "[ResetHighlightedTab]"
+
+	tooltipwidget = {
+		BasicFunctionalTooltip = {
+			blockoverride "tooltip_content" {
+				TooltipTextBlock = {
+					textcontext = "SM_EXCHANGE_TITLE"
+				}
+			}
+		}
+	}
+
+	action_tooltip = {
+		title = "SM_EXCHANGE_TITLE"
+		# Close whatever lateral view is open first — opening this panel
+		# replaces it, like the vanilla tabs do. LeftView is the engine's
+		# global handle to the currently open left view.
+		on_action = "[LeftView.Close]"
+		on_action = "[GetVariableSystem.Toggle('sm_exchange_open')]"
+	}
+
+	using = layoutpolicy_expanding
+
+	icon = {
+		size = { 26 26 }
+		parentanchor = center
+		texture = "gfx/interface/icons/flat_icons/gold.dds"
+
+		using = button_panel_tab_icon_effect
+		blockoverride "icon_effect_visible" { visible = "[GetVariableSystem.Exists('sm_exchange_open')]" }
+		blockoverride "icon_effect_color"{ color = { 0.90 0.75 0.15 1.0 } }
+	}
+}
+
+# The ledger body (column headers, holdings list, footer hint), kept as
+# its own type so the sm_stock_ledger shell below stays readable. The
+# header is NOT part of this type — the host supplies window_header_alt.
+#
+# Styling is assembled from vanilla parts: the column-header band is the
+# economy card header (bg_card_header_01_economy), rows are the paper
+# scroll cards vanilla's own ledger uses (ledger_item_template in
+# pops_overview.gui -> bg_scroll_card), numbers use the #G/#R/#weak
+# inline formats and the @gold! text icon (countries_list_view.gui
+# precedent). Everything still reads only cached sm_gui_* values; the
+# sector tooltips too, so hovering costs nothing beyond variable reads.
+#
+# Sector cells have three states: held (stake % + monthly return),
+# unowned (dim dash), rival-held (red dash, tooltip names the problem).
+type sm_ledger_content = vbox {
+	using = layoutpolicy_expanding
+
+	# --- Portfolio summary: two large indicators on paper cards.
+	# Values are sm_portfolio_* variables cached on the player by the
+	# sm_refresh_portfolio_totals scripted effect (monthly pulse + every
+	# buy/sell), read here through the sm_gui_portfolio_* script values —
+	# nothing is summed per frame.
+	hbox = {
+		layoutpolicy_horizontal = expanding
+		margin = { 10 6 }
+		spacing = 6
+
+		# Total monthly returns
+		widget = {
+			layoutpolicy_horizontal = expanding
+			size = { -1 180 }
+			using = bg_scroll_card
+
+			vbox = {
+				parentanchor = center
+				spacing = 6
+
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					text = "SM_HDR_INCOME"
+					default_format = "#low"
+					fontsize = 14
+				}
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					raw_text = "#G +[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_portfolio_income')|2]#!@gold!"
+					fontsize = 28
+				}
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					text = "SM_PER_MONTH"
+					default_format = "#low"
+					fontsize = 12
+				}
+			}
+		}
+
+		# Total value of all holdings at current market prices
+		widget = {
+			layoutpolicy_horizontal = expanding
+			size = { -1 180 }
+			using = bg_scroll_card
+
+			vbox = {
+				parentanchor = center
+				spacing = 6
+
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					text = "SM_HDR_VALUE"
+					default_format = "#low"
+					fontsize = 14
+				}
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_portfolio_value')|0]@gold!"
+					fontsize = 28
+				}
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					text = "SM_HDR_VALUE_SUB"
+					default_format = "#low"
+					fontsize = 12
+				}
+			}
+		}
+	}
+
+	# --- Column headers on an economy-green band ---
+	# The cells live in a FIXED-width hbox: exactly the sum of the cells
+	# and gaps (530), zero slack. Layout boxes redistribute any leftover
+	# width between children — and expand = {} grabs a share rather than
+	# soaking slack — so a header whose slack differs from the rows'
+	# renders a different column pitch and visibly drifts (seen on-screen
+	# twice). The rows use the same fixed-width inner hbox; both start at
+	# x = 18 (row outer 10 + card inner 8).
+	widget = {
+		layoutpolicy_horizontal = expanding
+		size = { -1 56 }
+		using = bg_card_header_01_economy
+
+		hbox = {
+		position = { 18 6 }
+		size = { 514 44 }
+		spacing = 4
+
+		text_single = {
+			size = { 178 40 }
+			align = left|nobaseline
+			text = "SM_COL_COUNTRY"
+			default_format = "#yellow_titles"
+			fontsize = 14
+		}
+
+		vbox = {
+			size = { 80 44 }
+			spacing = 2
+			icon = { size = { 22 22 } texture = "gfx/interface/icons/trade_goods/icon_goods_wheat.dds" }
+			text_single = { size = { 78 14 } align = center|nobaseline text = "SM_SEC_AGRICULTURE" fontsize = 12 }
+		}
+		vbox = {
+			size = { 80 44 }
+			spacing = 2
+			icon = { size = { 22 22 } texture = "gfx/interface/icons/trade_goods/icon_goods_iron.dds" }
+			text_single = { size = { 78 14 } align = center|nobaseline text = "SM_SEC_MINING" fontsize = 12 }
+		}
+		vbox = {
+			size = { 80 44 }
+			spacing = 2
+			icon = { size = { 22 22 } texture = "gfx/interface/icons/trade_goods/icon_goods_tools.dds" }
+			text_single = { size = { 78 14 } align = center|nobaseline text = "SM_SEC_INDUSTRY" fontsize = 12 }
+		}
+		vbox = {
+			size = { 80 44 }
+			spacing = 2
+			icon = { size = { 22 22 } texture = "gfx/interface/icons/building_categories/trade_category.dds" }
+			text_single = { size = { 78 14 } align = center|nobaseline text = "SM_SEC_COMMERCE" fontsize = 12 }
+		}
+		}
+	}
+
+	# --- Holdings, one paper card per country we hold concessions in ---
+	scrollarea = {
+		using = layoutpolicy_expanding
+		scrollbarpolicy_horizontal = always_off
+
+		scrollbar_vertical = {
+			using = Scrollbar_Vertical
+		}
+
+		scrollwidget = {
+			# fixedgridbox, addcolumn 100% / addrow 54: the vanilla container
+			# for single-column datamodel lists (ai_settings_menu.gui,
+			# countries_list_view.gui). A vbox does NOT stack datamodel items
+			# by content height — it distributed our rows evenly across the
+			# panel, leaving huge gaps. The grid's fixed 54px row pitch is
+			# fine because the datamodel is pre-filtered: every slot is a
+			# real holding.
+			fixedgridbox = {
+				name = "sm_ledger_rows"
+				addcolumn = 100%
+				addrow = 54
+				setitemsizefromcell = yes
+				# The datamodel is the player's own script list of investment
+				# targets, maintained by the buy/sell interactions and
+				# self-healed by the monthly pulse (vanilla precedent:
+				# middle_kingdom.gui 'visited_countries'). Pre-filtering in
+				# script beats iterating all countries and hiding rows: the
+				# grid reserves a slot per item whether visible or not.
+				datamodel = "[GetPlayer.MakeScope.GetList('sm_investment_targets')]"
+
+				item = {
+					widget = {
+						size = { 100% 54 }
+						# List items are bare scopes; promote to Country so
+						# all the row's Country.* calls resolve.
+						datacontext = "[Scope.GetCountry]"
+
+						hbox = {
+							margin = { 10 0 }
+
+							widget = {
+								using = layoutpolicy_expanding
+								using = bg_scroll_card
+
+								# Fixed-width inner hbox: zero slack, so the engine
+								# cannot redistribute the cells — see header comment.
+								hbox = {
+									position = { 8 3 }
+									size = { 514 48 }
+									spacing = 4
+
+									# Country column: flag, name, total monthly return
+									vbox = {
+										size = { 178 48 }
+										spacing = 2
+
+										hbox = {
+											layoutpolicy_horizontal = expanding
+											spacing = 6
+											country_flag_small = {}
+											text_single = {
+												layoutpolicy_horizontal = expanding
+												autoresize = no
+												align = left|nobaseline
+												# Short name ("France", not "Kingdom of France") —
+												# the long form clips at any affordable column
+												# width; the full title is in the hover tooltip.
+												text = "[Country.GetNameWithNoTooltip]"
+												default_format = "#yellow_titles"
+												fontsize = 14
+												tooltipwidget = {
+													using = CountryTooltip
+												}
+											}
+										}
+										hbox = {
+											layoutpolicy_horizontal = expanding
+											spacing = 3
+											text_single = {
+												autoresize = yes
+												raw_text = "#G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_my_dividends_here')|2]#!@gold!"
+												fontsize = 12
+											}
+											text_single = {
+												autoresize = yes
+												text = "SM_PER_MONTH"
+												default_format = "#low"
+												fontsize = 11
+											}
+											expand = {}
+										}
+									}
+
+									# --- Agriculture ---
+									widget = {
+										size = { 80 48 }
+
+										tooltipwidget = {
+											BasicFunctionalTooltip = {
+												blockoverride "tooltip_content" {
+													vbox = {
+														spacing = 3
+														text_single = { autoresize = yes text = "SM_SEC_AGRICULTURE" default_format = "#yellow_titles" }
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_VALUE" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_value')|0]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_BUY" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_buy_price')|1]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_SELL" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_sell_price')|1]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_my_stake'), '(CFixedPoint)0')]"
+															text_single = { autoresize = yes text = "SM_TT_HELD" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_my_stake')|0]% #G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_dividend')|2]#!@gold!" }
+														}
+														text_single = {
+															autoresize = yes
+															visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_taken'), '(CFixedPoint)0')]"
+															text = "SM_TAKEN_FMT"
+														}
+													}
+												}
+											}
+										}
+
+										vbox = {
+											parentanchor = center
+											spacing = 2
+											visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_my_stake'), '(CFixedPoint)0')]"
+
+											text_single = {
+												size = { 76 20 }
+												align = center|nobaseline
+												raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_my_stake')|0]%"
+												fontsize = 15
+											}
+											text_single = {
+												size = { 76 16 }
+												align = center|nobaseline
+												raw_text = "#G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_dividend')|2]#!@gold!"
+												fontsize = 12
+											}
+										}
+										text_single = {
+											parentanchor = center
+											autoresize = yes
+											visible = "[Not(Or(GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_my_stake'), '(CFixedPoint)0'), GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_taken'), '(CFixedPoint)0')))]"
+											raw_text = "#weak —#!"
+											fontsize = 15
+										}
+										text_single = {
+											parentanchor = center
+											autoresize = yes
+											visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_agriculture_taken'), '(CFixedPoint)0')]"
+											raw_text = "#R —#!"
+											fontsize = 15
+										}
+									}
+
+									# --- Mining ---
+									widget = {
+										size = { 80 48 }
+
+										tooltipwidget = {
+											BasicFunctionalTooltip = {
+												blockoverride "tooltip_content" {
+													vbox = {
+														spacing = 3
+														text_single = { autoresize = yes text = "SM_SEC_MINING" default_format = "#yellow_titles" }
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_VALUE" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_value')|0]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_BUY" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_buy_price')|1]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_SELL" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_sell_price')|1]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_my_stake'), '(CFixedPoint)0')]"
+															text_single = { autoresize = yes text = "SM_TT_HELD" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_my_stake')|0]% #G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_dividend')|2]#!@gold!" }
+														}
+														text_single = {
+															autoresize = yes
+															visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_taken'), '(CFixedPoint)0')]"
+															text = "SM_TAKEN_FMT"
+														}
+													}
+												}
+											}
+										}
+
+										vbox = {
+											parentanchor = center
+											spacing = 2
+											visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_my_stake'), '(CFixedPoint)0')]"
+
+											text_single = {
+												size = { 76 20 }
+												align = center|nobaseline
+												raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_my_stake')|0]%"
+												fontsize = 15
+											}
+											text_single = {
+												size = { 76 16 }
+												align = center|nobaseline
+												raw_text = "#G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_dividend')|2]#!@gold!"
+												fontsize = 12
+											}
+										}
+										text_single = {
+											parentanchor = center
+											autoresize = yes
+											visible = "[Not(Or(GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_my_stake'), '(CFixedPoint)0'), GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_taken'), '(CFixedPoint)0')))]"
+											raw_text = "#weak —#!"
+											fontsize = 15
+										}
+										text_single = {
+											parentanchor = center
+											autoresize = yes
+											visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_mining_taken'), '(CFixedPoint)0')]"
+											raw_text = "#R —#!"
+											fontsize = 15
+										}
+									}
+
+									# --- Industry ---
+									widget = {
+										size = { 80 48 }
+
+										tooltipwidget = {
+											BasicFunctionalTooltip = {
+												blockoverride "tooltip_content" {
+													vbox = {
+														spacing = 3
+														text_single = { autoresize = yes text = "SM_SEC_INDUSTRY" default_format = "#yellow_titles" }
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_VALUE" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_value')|0]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_BUY" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_buy_price')|1]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_SELL" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_sell_price')|1]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_my_stake'), '(CFixedPoint)0')]"
+															text_single = { autoresize = yes text = "SM_TT_HELD" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_my_stake')|0]% #G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_dividend')|2]#!@gold!" }
+														}
+														text_single = {
+															autoresize = yes
+															visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_taken'), '(CFixedPoint)0')]"
+															text = "SM_TAKEN_FMT"
+														}
+													}
+												}
+											}
+										}
+
+										vbox = {
+											parentanchor = center
+											spacing = 2
+											visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_my_stake'), '(CFixedPoint)0')]"
+
+											text_single = {
+												size = { 76 20 }
+												align = center|nobaseline
+												raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_my_stake')|0]%"
+												fontsize = 15
+											}
+											text_single = {
+												size = { 76 16 }
+												align = center|nobaseline
+												raw_text = "#G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_dividend')|2]#!@gold!"
+												fontsize = 12
+											}
+										}
+										text_single = {
+											parentanchor = center
+											autoresize = yes
+											visible = "[Not(Or(GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_my_stake'), '(CFixedPoint)0'), GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_taken'), '(CFixedPoint)0')))]"
+											raw_text = "#weak —#!"
+											fontsize = 15
+										}
+										text_single = {
+											parentanchor = center
+											autoresize = yes
+											visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_industry_taken'), '(CFixedPoint)0')]"
+											raw_text = "#R —#!"
+											fontsize = 15
+										}
+									}
+
+									# --- Commerce ---
+									widget = {
+										size = { 80 48 }
+
+										tooltipwidget = {
+											BasicFunctionalTooltip = {
+												blockoverride "tooltip_content" {
+													vbox = {
+														spacing = 3
+														text_single = { autoresize = yes text = "SM_SEC_COMMERCE" default_format = "#yellow_titles" }
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_VALUE" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_value')|0]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_BUY" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_buy_price')|1]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															text_single = { autoresize = yes text = "SM_TT_SELL" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_sell_price')|1]@gold!" }
+														}
+														hbox = {
+															spacing = 8
+															visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_my_stake'), '(CFixedPoint)0')]"
+															text_single = { autoresize = yes text = "SM_TT_HELD" default_format = "#low" }
+															text_single = { autoresize = yes raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_my_stake')|0]% #G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_dividend')|2]#!@gold!" }
+														}
+														text_single = {
+															autoresize = yes
+															visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_taken'), '(CFixedPoint)0')]"
+															text = "SM_TAKEN_FMT"
+														}
+													}
+												}
+											}
+										}
+
+										vbox = {
+											parentanchor = center
+											spacing = 2
+											visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_my_stake'), '(CFixedPoint)0')]"
+
+											text_single = {
+												size = { 76 20 }
+												align = center|nobaseline
+												raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_my_stake')|0]%"
+												fontsize = 15
+											}
+											text_single = {
+												size = { 76 16 }
+												align = center|nobaseline
+												raw_text = "#G +[GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_dividend')|2]#!@gold!"
+												fontsize = 12
+											}
+										}
+										text_single = {
+											parentanchor = center
+											autoresize = yes
+											visible = "[Not(Or(GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_my_stake'), '(CFixedPoint)0'), GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_taken'), '(CFixedPoint)0')))]"
+											raw_text = "#weak —#!"
+											fontsize = 15
+										}
+										text_single = {
+											parentanchor = center
+											autoresize = yes
+											visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('target', Country.MakeScope).ScriptValue('sm_gui_commerce_taken'), '(CFixedPoint)0')]"
+											raw_text = "#R —#!"
+											fontsize = 15
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	# --- Footer hint ---
+	text_multi = {
+		layoutpolicy_horizontal = expanding
+		margin = { 14 6 }
+		autoresize = yes
+		text = "SM_LEDGER_HINT"
+		default_format = "#low"
+		fontsize = 13
+	}
+}
+
+# The Foreign Investments ledger: read-only, styled and positioned like
+# the real left lateral views via the passive vanilla templates.
+# Instantiated inside the root widget of the ingame_topbar.gui override.
+type sm_stock_ledger = widget {
+	name = "sm_stock_ledger"
+	# Vanilla left-lateral-view geometry (570 wide, under the tab bar).
+	# The template is layer plumbing (alwaystransparent/filter_mouse none),
+	# so re-enable interaction after applying it.
+	using = lateralview_left_setup
+	alwaystransparent = no
+	filter_mouse = all
+	# Only one thing lives on the left at a time: hide whenever a real
+	# lateral view is up.
+	visible = "[And(GetVariableSystem.Exists('sm_exchange_open'), Not(LeftView.IsShown))]"
+
+	# Mirror lateral-view exclusivity the rest of the way: whatever hides
+	# this panel (a tab view, the foreign-country panel, a macrobuilder,
+	# our own close button) also clears the toggle, so it stays closed
+	# instead of popping back when the other view goes away.
+	state = {
+		name = _hide
+		on_start = "[GetVariableSystem.Clear('sm_exchange_open')]"
+	}
+
+	vbox = {
+		using = layoutpolicy_expanding
+		using = lateralview_margins
+
+		widget = {
+			using = layoutpolicy_expanding
+			alwaystransparent = no
+
+			vbox = {
+				using = layoutpolicy_expanding
+				using = bg_lateralview
+
+				window_header_alt = {
+					blockoverride "header_text" {
+						text = "SM_LEDGER_TITLE"
+					}
+					blockoverride "window_header_alt_color_texture" {
+						using = color_default_brown_texture
+					}
+				}
+
+				sm_ledger_content = {}
+			}
+
+			button_close = {
+				onclick = "[GetVariableSystem.Toggle('sm_exchange_open')]"
+				# ESC closes the ledger: the button_close type already binds
+				# input_action = "close_window" + use_global_input_instance
+				# (see close_inputaction block in main_menu_buttons.gui), but
+				# that binding fires on_input_action_shortcut, not onclick —
+				# vanilla precedent: the left_panel flag binds go_to_capital
+				# the same way. Only active while the button is visible, so
+				# ESC with the ledger closed still opens the game menu.
+				on_input_action_shortcut = "[GetVariableSystem.Clear('sm_exchange_open')]"
+			}
+		}
+	}
+}
+
+}

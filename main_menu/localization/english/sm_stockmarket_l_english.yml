@@ -1,0 +1,135 @@
+﻿l_english:
+
+ #################################################################
+ # Investments — concessions in foreign industry sectors
+ #################################################################
+
+ # --- Investments ledger (Phase 2) ---
+ SM_EXCHANGE_TITLE: "Investments"
+ SM_LEDGER_TITLE: "Foreign Investments"
+ SM_LEDGER_HINT: "Investments are made and liquidated through diplomatic actions. Returns are paid on the 1st of each month."
+ SM_COL_COUNTRY: "Country"
+ SM_SEC_AGRICULTURE: "Agriculture"
+ SM_SEC_MINING: "Mining"
+ SM_SEC_INDUSTRY: "Industry"
+ SM_SEC_COMMERCE: "Commerce"
+ SM_TAKEN: "Rival concession"
+ SM_PER_MONTH: "per month"
+ SM_TT_VALUE: "Sector market value:"
+ SM_TT_BUY: "Concession price (10%):"
+ SM_TT_SELL: "Liquidation value (10%):"
+ SM_TT_HELD: "Our concession:"
+ SM_TAKEN_FMT: "#R Rival concession#!"
+ SM_HDR_INCOME: "Total Monthly Returns"
+ SM_HDR_VALUE: "Total Investment Value"
+ SM_HDR_VALUE_SUB: "at current market prices"
+
+ # --- Accept-reason descriptions (shared across all investment offers) ---
+ SM_ACCEPT_RELUCTANCE: "We do not part with our nation's patrimony lightly"
+ SM_ACCEPT_CROWN_JEWELS: "Our mines are the crown's jewels"
+ SM_ACCEPT_TRUSTED: "A trusted partner"
+ SM_ACCEPT_CLOSE: "Bound by genuine friendship"
+ SM_ACCEPT_PARTNER: "They already hold a concession here"
+ SM_ACCEPT_BROKE: "Our treasury is empty — their gold is hard to refuse"
+ SM_ACCEPT_WAR: "War devours coin; we must raise funds"
+ SM_ACCEPT_UNREST: "Instability makes us desperate"
+ SM_ACCEPT_ENEMY: "We are at war with them!"
+
+ # --- Incoming-offer popup & rejection texts (investments are offers the AI
+ #     answers; error.log names these exact keys when they're missing) ---
+ INCOMING_OFFER_sm_buy_agriculture_stake: "An offer to invest in our farmland"
+ INCOMING_OFFER_TITLE_sm_buy_agriculture_stake: "Agricultural Investment Offer"
+ sm_buy_agriculture_stake_reject_effect_text: "We refuse to let [SCOPE.sCountry('actor').GetName] invest in our agriculture."
+ sm_buy_agriculture_stake_reject_effect_text_past: "We refused to let [SCOPE.sCountry('actor').GetName] invest in our agriculture."
+ INCOMING_OFFER_sm_buy_mining_stake: "An offer to invest in our mines"
+ INCOMING_OFFER_TITLE_sm_buy_mining_stake: "Mining Investment Offer"
+ sm_buy_mining_stake_reject_effect_text: "We refuse to let [SCOPE.sCountry('actor').GetName] invest in our mines."
+ sm_buy_mining_stake_reject_effect_text_past: "We refused to let [SCOPE.sCountry('actor').GetName] invest in our mines."
+ INCOMING_OFFER_sm_buy_industry_stake: "An offer to invest in our workshops"
+ INCOMING_OFFER_TITLE_sm_buy_industry_stake: "Industrial Investment Offer"
+ sm_buy_industry_stake_reject_effect_text: "We refuse to let [SCOPE.sCountry('actor').GetName] invest in our industry."
+ sm_buy_industry_stake_reject_effect_text_past: "We refused to let [SCOPE.sCountry('actor').GetName] invest in our industry."
+ INCOMING_OFFER_sm_buy_commerce_stake: "An offer to invest in our customs houses"
+ INCOMING_OFFER_TITLE_sm_buy_commerce_stake: "Commercial Investment Offer"
+ sm_buy_commerce_stake_reject_effect_text: "We refuse to let [SCOPE.sCountry('actor').GetName] invest in our commerce."
+ sm_buy_commerce_stake_reject_effect_text_past: "We refused to let [SCOPE.sCountry('actor').GetName] invest in our commerce."
+
+ # --- Invest: Agriculture ---
+ sm_buy_agriculture_stake: "Invest in Agriculture"
+ dip_sm_buy_agriculture_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_buy_agriculture_stake_act: "Purchase a 10% concession in the farms and estates of [SCOPE.sCountry('recipient').GetName]"
+ sm_buy_agriculture_stake_desc: "We offer gold — paid directly into their treasury — for a tithe on the harvests of [SCOPE.sCountry('recipient').GetName]. Each investment secures one tenth of the sector; the concession pays us monthly returns from their coffers, and is ours until liquidated... or seized."
+ sm_buy_agriculture_stake_effect_text: "[SCOPE.sCountry('actor').GetName] invested in the agriculture of [SCOPE.sCountry('recipient').GetName]."
+ sm_buy_agriculture_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] invested in the agriculture of [SCOPE.sCountry('recipient').GetName]."
+ PROPOSE_sm_buy_agriculture_stake: "Purchase a 10% agricultural concession from $RECIPIENT$?\n\n$INFO$"
+ sm_buy_agriculture_stake_SELECT_TITLE: "Select a country whose agriculture to invest in."
+
+ # --- Invest: Mining ---
+ sm_buy_mining_stake: "Invest in Mining"
+ dip_sm_buy_mining_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_buy_mining_stake_act: "Purchase a 10% concession in the mines of [SCOPE.sCountry('recipient').GetName]"
+ sm_buy_mining_stake_desc: "The mines of [SCOPE.sCountry('recipient').GetName] — silver, gold, iron — are the richest prize an investor can hold, and the most grudgingly sold. Each investment secures one tenth of the sector, paying monthly returns from their treasury into ours."
+ sm_buy_mining_stake_effect_text: "[SCOPE.sCountry('actor').GetName] invested in the mines of [SCOPE.sCountry('recipient').GetName]."
+ sm_buy_mining_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] invested in the mines of [SCOPE.sCountry('recipient').GetName]."
+ PROPOSE_sm_buy_mining_stake: "Purchase a 10% mining concession from $RECIPIENT$?\n\n$INFO$"
+ sm_buy_mining_stake_SELECT_TITLE: "Select a country whose mines to invest in."
+
+ # --- Invest: Industry ---
+ sm_buy_industry_stake: "Invest in Industry"
+ dip_sm_buy_industry_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_buy_industry_stake_act: "Purchase a 10% concession in the workshops and manufactories of [SCOPE.sCountry('recipient').GetName]"
+ sm_buy_industry_stake_desc: "We buy into the workshops, foundries and manufactories of [SCOPE.sCountry('recipient').GetName]. Each investment secures one tenth of the sector, paying monthly returns from their treasury into ours."
+ sm_buy_industry_stake_effect_text: "[SCOPE.sCountry('actor').GetName] invested in the industry of [SCOPE.sCountry('recipient').GetName]."
+ sm_buy_industry_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] invested in the industry of [SCOPE.sCountry('recipient').GetName]."
+ PROPOSE_sm_buy_industry_stake: "Purchase a 10% industrial concession from $RECIPIENT$?\n\n$INFO$"
+ sm_buy_industry_stake_SELECT_TITLE: "Select a country whose industry to invest in."
+
+ # --- Invest: Commerce ---
+ sm_buy_commerce_stake: "Invest in Commerce"
+ dip_sm_buy_commerce_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_buy_commerce_stake_act: "Purchase a 10% concession in the trade and taxation of [SCOPE.sCountry('recipient').GetName]"
+ sm_buy_commerce_stake_desc: "We buy a portion of the customs houses, tolls and market dues of [SCOPE.sCountry('recipient').GetName]. Each investment secures one tenth of the sector, paying monthly returns from their treasury into ours."
+ sm_buy_commerce_stake_effect_text: "[SCOPE.sCountry('actor').GetName] invested in the commerce of [SCOPE.sCountry('recipient').GetName]."
+ sm_buy_commerce_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] invested in the commerce of [SCOPE.sCountry('recipient').GetName]."
+ PROPOSE_sm_buy_commerce_stake: "Purchase a 10% commercial concession from $RECIPIENT$?\n\n$INFO$"
+ sm_buy_commerce_stake_SELECT_TITLE: "Select a country whose commerce to invest in."
+
+ # --- Divest: Agriculture ---
+ sm_sell_agriculture_stake: "Divest from Agriculture"
+ dip_sm_sell_agriculture_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_sell_agriculture_stake_act: "Liquidate a 10% agricultural concession back to [SCOPE.sCountry('recipient').GetName]"
+ sm_sell_agriculture_stake_desc: "We unwind part of our agricultural concession in [SCOPE.sCountry('recipient').GetName]. They are the only buyer, they know it, and the price reflects it — paid out of their treasury whether they can afford it or not."
+ sm_sell_agriculture_stake_effect_text: "[SCOPE.sCountry('actor').GetName] liquidated an agricultural concession in [SCOPE.sCountry('recipient').GetName]."
+ sm_sell_agriculture_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] liquidated an agricultural concession in [SCOPE.sCountry('recipient').GetName]."
+ PROPOSE_sm_sell_agriculture_stake: "Liquidate a 10% agricultural concession back to $RECIPIENT$?\n\n$INFO$"
+ sm_sell_agriculture_stake_SELECT_TITLE: "Select a country to divest your agricultural concession from."
+
+ # --- Divest: Mining ---
+ sm_sell_mining_stake: "Divest from Mining"
+ dip_sm_sell_mining_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_sell_mining_stake_act: "Liquidate a 10% mining concession back to [SCOPE.sCountry('recipient').GetName]"
+ sm_sell_mining_stake_desc: "We unwind part of our mining concession in [SCOPE.sCountry('recipient').GetName]. They are the only buyer, they know it, and the price reflects it — paid out of their treasury whether they can afford it or not."
+ sm_sell_mining_stake_effect_text: "[SCOPE.sCountry('actor').GetName] liquidated a mining concession in [SCOPE.sCountry('recipient').GetName]."
+ sm_sell_mining_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] liquidated a mining concession in [SCOPE.sCountry('recipient').GetName]."
+ PROPOSE_sm_sell_mining_stake: "Liquidate a 10% mining concession back to $RECIPIENT$?\n\n$INFO$"
+ sm_sell_mining_stake_SELECT_TITLE: "Select a country to divest your mining concession from."
+
+ # --- Divest: Industry ---
+ sm_sell_industry_stake: "Divest from Industry"
+ dip_sm_sell_industry_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_sell_industry_stake_act: "Liquidate a 10% industrial concession back to [SCOPE.sCountry('recipient').GetName]"
+ sm_sell_industry_stake_desc: "We unwind part of our industrial concession in [SCOPE.sCountry('recipient').GetName]. They are the only buyer, they know it, and the price reflects it — paid out of their treasury whether they can afford it or not."
+ sm_sell_industry_stake_effect_text: "[SCOPE.sCountry('actor').GetName] liquidated an industrial concession in [SCOPE.sCountry('recipient').GetName]."
+ sm_sell_industry_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] liquidated an industrial concession in [SCOPE.sCountry('recipient').GetName]."
+ PROPOSE_sm_sell_industry_stake: "Liquidate a 10% industrial concession back to $RECIPIENT$?\n\n$INFO$"
+ sm_sell_industry_stake_SELECT_TITLE: "Select a country to divest your industrial concession from."
+
+ # --- Divest: Commerce ---
+ sm_sell_commerce_stake: "Divest from Commerce"
+ dip_sm_sell_commerce_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_sell_commerce_stake_act: "Liquidate a 10% commercial concession back to [SCOPE.sCountry('recipient').GetName]"
+ sm_sell_commerce_stake_desc: "We unwind part of our commercial concession in [SCOPE.sCountry('recipient').GetName]. They are the only buyer, they know it, and the price reflects it — paid out of their treasury whether they can afford it or not."
+ sm_sell_commerce_stake_effect_text: "[SCOPE.sCountry('actor').GetName] liquidated a commercial concession in [SCOPE.sCountry('recipient').GetName]."
+ sm_sell_commerce_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] liquidated a commercial concession in [SCOPE.sCountry('recipient').GetName]."
+ PROPOSE_sm_sell_commerce_stake: "Liquidate a 10% commercial concession back to $RECIPIENT$?\n\n$INFO$"
+ sm_sell_commerce_stake_SELECT_TITLE: "Select a country to divest your commercial concession from."

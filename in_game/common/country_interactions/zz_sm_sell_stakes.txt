@@ -1,0 +1,288 @@
+﻿# The Stock Exchange — liquidate a 10% tranche back to the issuing country.
+#
+# Selling is ONE-SIDED: the target country is the only possible buyer and has
+# no say. It pays the (haircut) market price out of its own treasury on the
+# spot — dumping your position into an already-broke country shoves it further
+# underwater. That is not a bug; that is finance.
+#
+# No banking reform required to sell: a country that lost its banking status
+# can still unwind its book.
+
+sm_sell_agriculture_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	# root is NOT a valid comparison target in interaction triggers — vanilla
+	# compares scope:actor directly.
+	potential = {
+		scope:recipient ?= {
+			var:sm_agriculture_stake_owner ?= scope:actor
+			var:sm_agriculture_stake_pct >= 0.1
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		column = {
+			data = name
+		}
+		visible = {
+			var:sm_agriculture_stake_owner ?= scope:actor
+		}
+		enabled = {
+			var:sm_agriculture_stake_pct >= 0.1
+		}
+	}
+
+	effect = {
+		scope:actor = {
+			add_gold = scope:recipient.sm_agriculture_sell_price
+		}
+		scope:recipient = {
+			add_gold = {
+				value = sm_agriculture_sell_price
+				multiply = -1
+			}
+			change_variable = { name = sm_agriculture_stake_pct subtract = 0.1 }
+			if = {
+				limit = { var:sm_agriculture_stake_pct < 0.05 }
+				remove_variable = sm_agriculture_stake_pct
+				remove_variable = sm_agriculture_stake_owner
+			}
+		}
+		# Ledger bookkeeping: drop the Investments-window row once no
+		# sector in this country is ours any more.
+		scope:actor = {
+			if = {
+				limit = {
+					scope:recipient = {
+						NOT = { var:sm_agriculture_stake_owner ?= scope:actor }
+						NOT = { var:sm_mining_stake_owner ?= scope:actor }
+						NOT = { var:sm_industry_stake_owner ?= scope:actor }
+						NOT = { var:sm_commerce_stake_owner ?= scope:actor }
+					}
+				}
+				remove_list_variable = {
+					name = sm_investment_targets
+					target = scope:recipient
+				}
+			}
+			# Header totals update instantly, not at next month tick.
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	ai_will_do = {
+		value = 0
+	}
+}
+
+sm_sell_mining_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	potential = {
+		scope:recipient ?= {
+			var:sm_mining_stake_owner ?= scope:actor
+			var:sm_mining_stake_pct >= 0.1
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		column = {
+			data = name
+		}
+		visible = {
+			var:sm_mining_stake_owner ?= scope:actor
+		}
+		enabled = {
+			var:sm_mining_stake_pct >= 0.1
+		}
+	}
+
+	effect = {
+		scope:actor = {
+			add_gold = scope:recipient.sm_mining_sell_price
+		}
+		scope:recipient = {
+			add_gold = {
+				value = sm_mining_sell_price
+				multiply = -1
+			}
+			change_variable = { name = sm_mining_stake_pct subtract = 0.1 }
+			if = {
+				limit = { var:sm_mining_stake_pct < 0.05 }
+				remove_variable = sm_mining_stake_pct
+				remove_variable = sm_mining_stake_owner
+			}
+		}
+		# Ledger bookkeeping: see sm_sell_agriculture_stake.
+		scope:actor = {
+			if = {
+				limit = {
+					scope:recipient = {
+						NOT = { var:sm_agriculture_stake_owner ?= scope:actor }
+						NOT = { var:sm_mining_stake_owner ?= scope:actor }
+						NOT = { var:sm_industry_stake_owner ?= scope:actor }
+						NOT = { var:sm_commerce_stake_owner ?= scope:actor }
+					}
+				}
+				remove_list_variable = {
+					name = sm_investment_targets
+					target = scope:recipient
+				}
+			}
+			# Header totals update instantly, not at next month tick.
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	ai_will_do = {
+		value = 0
+	}
+}
+
+sm_sell_industry_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	potential = {
+		scope:recipient ?= {
+			var:sm_industry_stake_owner ?= scope:actor
+			var:sm_industry_stake_pct >= 0.1
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		column = {
+			data = name
+		}
+		visible = {
+			var:sm_industry_stake_owner ?= scope:actor
+		}
+		enabled = {
+			var:sm_industry_stake_pct >= 0.1
+		}
+	}
+
+	effect = {
+		scope:actor = {
+			add_gold = scope:recipient.sm_industry_sell_price
+		}
+		scope:recipient = {
+			add_gold = {
+				value = sm_industry_sell_price
+				multiply = -1
+			}
+			change_variable = { name = sm_industry_stake_pct subtract = 0.1 }
+			if = {
+				limit = { var:sm_industry_stake_pct < 0.05 }
+				remove_variable = sm_industry_stake_pct
+				remove_variable = sm_industry_stake_owner
+			}
+		}
+		# Ledger bookkeeping: see sm_sell_agriculture_stake.
+		scope:actor = {
+			if = {
+				limit = {
+					scope:recipient = {
+						NOT = { var:sm_agriculture_stake_owner ?= scope:actor }
+						NOT = { var:sm_mining_stake_owner ?= scope:actor }
+						NOT = { var:sm_industry_stake_owner ?= scope:actor }
+						NOT = { var:sm_commerce_stake_owner ?= scope:actor }
+					}
+				}
+				remove_list_variable = {
+					name = sm_investment_targets
+					target = scope:recipient
+				}
+			}
+			# Header totals update instantly, not at next month tick.
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	ai_will_do = {
+		value = 0
+	}
+}
+
+sm_sell_commerce_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	potential = {
+		scope:recipient ?= {
+			var:sm_commerce_stake_owner ?= scope:actor
+			var:sm_commerce_stake_pct >= 0.1
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		column = {
+			data = name
+		}
+		visible = {
+			var:sm_commerce_stake_owner ?= scope:actor
+		}
+		enabled = {
+			var:sm_commerce_stake_pct >= 0.1
+		}
+	}
+
+	effect = {
+		scope:actor = {
+			add_gold = scope:recipient.sm_commerce_sell_price
+		}
+		scope:recipient = {
+			add_gold = {
+				value = sm_commerce_sell_price
+				multiply = -1
+			}
+			change_variable = { name = sm_commerce_stake_pct subtract = 0.1 }
+			if = {
+				limit = { var:sm_commerce_stake_pct < 0.05 }
+				remove_variable = sm_commerce_stake_pct
+				remove_variable = sm_commerce_stake_owner
+			}
+		}
+		# Ledger bookkeeping: see sm_sell_agriculture_stake.
+		scope:actor = {
+			if = {
+				limit = {
+					scope:recipient = {
+						NOT = { var:sm_agriculture_stake_owner ?= scope:actor }
+						NOT = { var:sm_mining_stake_owner ?= scope:actor }
+						NOT = { var:sm_industry_stake_owner ?= scope:actor }
+						NOT = { var:sm_commerce_stake_owner ?= scope:actor }
+					}
+				}
+				remove_list_variable = {
+					name = sm_investment_targets
+					target = scope:recipient
+				}
+			}
+			# Header totals update instantly, not at next month tick.
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	ai_will_do = {
+		value = 0
+	}
+}

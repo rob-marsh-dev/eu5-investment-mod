@@ -1,0 +1,511 @@
+﻿# The Stock Exchange — buy a 10% tranche of a foreign nation's sector.
+#
+# One interaction per sector (script has no dynamic variable names, so each
+# sector's bookkeeping is spelled out). Shared shape:
+#  - Gated on the vanilla banking_country reform (works without the banking mod).
+#  - Concession model: at most ONE foreign holder per sector. You can open a
+#    concession (unowned sector) or deepen one you already hold; you cannot
+#    buy into someone else's. Rival buyouts arrive in Phase 3.
+#  - The target must CONSENT. Rulers do not part with their patrimony lightly:
+#    the base stance is refusal, overcome by friendship or desperation (broke,
+#    at war, unstable). Buying cheap from the desperate is the intended play.
+#  - The purchase price is paid INTO the target's treasury. Cash now,
+#    dividend bleed forever.
+#  - No affordability guard on the buyer: the treasury can go negative.
+#  - use_enroute = no: resolves instantly, no diplomat consumed.
+
+sm_buy_agriculture_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	potential = {
+		scope:actor = {
+			has_reform = government_reform:banking_country
+		}
+		# root is NOT a valid comparison target in interaction triggers
+		# ("Invalid right side" spam) — vanilla compares scope:actor directly.
+		scope:recipient ?= {
+			NOT = { this = scope:actor }
+			sm_agriculture_book_value > 0
+			OR = {
+				NOT = { exists = var:sm_agriculture_stake_owner }
+				AND = {
+					var:sm_agriculture_stake_owner ?= scope:actor
+					var:sm_agriculture_stake_pct < 1
+				}
+			}
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		column = {
+			data = name
+		}
+		# Cheap proxy trigger: the picker evaluates this for every country in the
+		# list, so no location-iterating script values here.
+		visible = {
+			has_any_rgo_of_goods_method = farming
+		}
+		enabled = {
+			OR = {
+				NOT = { exists = var:sm_agriculture_stake_owner }
+				AND = {
+					var:sm_agriculture_stake_owner ?= scope:actor
+					var:sm_agriculture_stake_pct < 1
+				}
+			}
+		}
+	}
+
+	effect = {
+		scope:actor = {
+			add_gold = {
+				value = scope:recipient.sm_agriculture_buy_price
+				multiply = -1
+			}
+		}
+		scope:recipient = {
+			add_gold = sm_agriculture_buy_price
+			set_variable = { name = sm_agriculture_stake_owner value = scope:actor }
+			if = {
+				limit = { NOT = { exists = var:sm_agriculture_stake_pct } }
+				set_variable = { name = sm_agriculture_stake_pct value = 0 }
+			}
+			change_variable = { name = sm_agriculture_stake_pct add = 0.1 }
+		}
+		# Ledger bookkeeping: the Investments window iterates the actor's
+		# sm_investment_targets list instead of scanning all countries.
+		scope:actor = {
+			if = {
+				limit = {
+					NOT = {
+						is_target_in_variable_list = {
+							name = sm_investment_targets
+							target = scope:recipient
+						}
+					}
+				}
+				add_to_variable_list = {
+					name = sm_investment_targets
+					target = scope:recipient
+				}
+			}
+			# Header totals update instantly, not at next month tick.
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	accept = {
+		add = { desc = "SM_ACCEPT_RELUCTANCE" value = -30 }
+		if = {
+			limit = { scope:recipient = { opinion = { target = scope:actor value >= 50 } } }
+			add = { desc = "SM_ACCEPT_TRUSTED" value = 20 }
+		}
+		if = {
+			limit = { scope:recipient = { opinion = { target = scope:actor value >= 100 } } }
+			add = { desc = "SM_ACCEPT_CLOSE" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { var:sm_agriculture_stake_owner ?= scope:actor } }
+			add = { desc = "SM_ACCEPT_PARTNER" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { gold < 0 } }
+			add = { desc = "SM_ACCEPT_BROKE" value = 45 }
+		}
+		if = {
+			limit = { scope:recipient = { at_war = yes } }
+			add = { desc = "SM_ACCEPT_WAR" value = 25 }
+		}
+		if = {
+			limit = { scope:recipient = { stability < -25 } }
+			add = { desc = "SM_ACCEPT_UNREST" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { is_at_war_with = scope:actor } }
+			add = { desc = "SM_ACCEPT_ENEMY" value = -1000 }
+		}
+	}
+
+	# No AI investors in Phase 1.
+	ai_will_do = {
+		value = 0
+	}
+}
+
+sm_buy_mining_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	potential = {
+		scope:actor = {
+			has_reform = government_reform:banking_country
+		}
+		# root is NOT a valid comparison target in interaction triggers
+		# ("Invalid right side" spam) — vanilla compares scope:actor directly.
+		scope:recipient ?= {
+			NOT = { this = scope:actor }
+			sm_mining_book_value > 0
+			OR = {
+				NOT = { exists = var:sm_mining_stake_owner }
+				AND = {
+					var:sm_mining_stake_owner ?= scope:actor
+					var:sm_mining_stake_pct < 1
+				}
+			}
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		column = {
+			data = name
+		}
+		# Cheap proxy trigger: the picker evaluates this for every country in the
+		# list, so no location-iterating script values here.
+		visible = {
+			has_any_rgo_of_goods_method = mining
+		}
+		enabled = {
+			OR = {
+				NOT = { exists = var:sm_mining_stake_owner }
+				AND = {
+					var:sm_mining_stake_owner ?= scope:actor
+					var:sm_mining_stake_pct < 1
+				}
+			}
+		}
+	}
+
+	effect = {
+		scope:actor = {
+			add_gold = {
+				value = scope:recipient.sm_mining_buy_price
+				multiply = -1
+			}
+		}
+		scope:recipient = {
+			add_gold = sm_mining_buy_price
+			set_variable = { name = sm_mining_stake_owner value = scope:actor }
+			if = {
+				limit = { NOT = { exists = var:sm_mining_stake_pct } }
+				set_variable = { name = sm_mining_stake_pct value = 0 }
+			}
+			change_variable = { name = sm_mining_stake_pct add = 0.1 }
+		}
+		# Ledger bookkeeping: see sm_buy_agriculture_stake.
+		scope:actor = {
+			if = {
+				limit = {
+					NOT = {
+						is_target_in_variable_list = {
+							name = sm_investment_targets
+							target = scope:recipient
+						}
+					}
+				}
+				add_to_variable_list = {
+					name = sm_investment_targets
+					target = scope:recipient
+				}
+			}
+			# Header totals update instantly, not at next month tick.
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	accept = {
+		add = { desc = "SM_ACCEPT_RELUCTANCE" value = -30 }
+		# The crown jewels: mines are surrendered even more grudgingly.
+		add = { desc = "SM_ACCEPT_CROWN_JEWELS" value = -10 }
+		if = {
+			limit = { scope:recipient = { opinion = { target = scope:actor value >= 50 } } }
+			add = { desc = "SM_ACCEPT_TRUSTED" value = 20 }
+		}
+		if = {
+			limit = { scope:recipient = { opinion = { target = scope:actor value >= 100 } } }
+			add = { desc = "SM_ACCEPT_CLOSE" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { var:sm_mining_stake_owner ?= scope:actor } }
+			add = { desc = "SM_ACCEPT_PARTNER" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { gold < 0 } }
+			add = { desc = "SM_ACCEPT_BROKE" value = 45 }
+		}
+		if = {
+			limit = { scope:recipient = { at_war = yes } }
+			add = { desc = "SM_ACCEPT_WAR" value = 25 }
+		}
+		if = {
+			limit = { scope:recipient = { stability < -25 } }
+			add = { desc = "SM_ACCEPT_UNREST" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { is_at_war_with = scope:actor } }
+			add = { desc = "SM_ACCEPT_ENEMY" value = -1000 }
+		}
+	}
+
+	ai_will_do = {
+		value = 0
+	}
+}
+
+sm_buy_industry_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	potential = {
+		scope:actor = {
+			has_reform = government_reform:banking_country
+		}
+		# root is NOT a valid comparison target in interaction triggers
+		# ("Invalid right side" spam) — vanilla compares scope:actor directly.
+		scope:recipient ?= {
+			NOT = { this = scope:actor }
+			sm_industry_book_value > 0
+			OR = {
+				NOT = { exists = var:sm_industry_stake_owner }
+				AND = {
+					var:sm_industry_stake_owner ?= scope:actor
+					var:sm_industry_stake_pct < 1
+				}
+			}
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		column = {
+			data = name
+		}
+		# Cheap-ish proxy: any_ triggers short-circuit on the first hit, unlike
+		# the full book-value summation.
+		visible = {
+			any_owned_location = {
+				any_buildings_in_location = {
+					OR = {
+						building_category = basic_industry_category
+						building_category = weapons_industry_category
+						building_category = consumer_goods_category
+					}
+				}
+			}
+		}
+		enabled = {
+			OR = {
+				NOT = { exists = var:sm_industry_stake_owner }
+				AND = {
+					var:sm_industry_stake_owner ?= scope:actor
+					var:sm_industry_stake_pct < 1
+				}
+			}
+		}
+	}
+
+	effect = {
+		scope:actor = {
+			add_gold = {
+				value = scope:recipient.sm_industry_buy_price
+				multiply = -1
+			}
+		}
+		scope:recipient = {
+			add_gold = sm_industry_buy_price
+			set_variable = { name = sm_industry_stake_owner value = scope:actor }
+			if = {
+				limit = { NOT = { exists = var:sm_industry_stake_pct } }
+				set_variable = { name = sm_industry_stake_pct value = 0 }
+			}
+			change_variable = { name = sm_industry_stake_pct add = 0.1 }
+		}
+		# Ledger bookkeeping: see sm_buy_agriculture_stake.
+		scope:actor = {
+			if = {
+				limit = {
+					NOT = {
+						is_target_in_variable_list = {
+							name = sm_investment_targets
+							target = scope:recipient
+						}
+					}
+				}
+				add_to_variable_list = {
+					name = sm_investment_targets
+					target = scope:recipient
+				}
+			}
+			# Header totals update instantly, not at next month tick.
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	accept = {
+		add = { desc = "SM_ACCEPT_RELUCTANCE" value = -30 }
+		if = {
+			limit = { scope:recipient = { opinion = { target = scope:actor value >= 50 } } }
+			add = { desc = "SM_ACCEPT_TRUSTED" value = 20 }
+		}
+		if = {
+			limit = { scope:recipient = { opinion = { target = scope:actor value >= 100 } } }
+			add = { desc = "SM_ACCEPT_CLOSE" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { var:sm_industry_stake_owner ?= scope:actor } }
+			add = { desc = "SM_ACCEPT_PARTNER" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { gold < 0 } }
+			add = { desc = "SM_ACCEPT_BROKE" value = 45 }
+		}
+		if = {
+			limit = { scope:recipient = { at_war = yes } }
+			add = { desc = "SM_ACCEPT_WAR" value = 25 }
+		}
+		if = {
+			limit = { scope:recipient = { stability < -25 } }
+			add = { desc = "SM_ACCEPT_UNREST" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { is_at_war_with = scope:actor } }
+			add = { desc = "SM_ACCEPT_ENEMY" value = -1000 }
+		}
+	}
+
+	ai_will_do = {
+		value = 0
+	}
+}
+
+sm_buy_commerce_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	potential = {
+		scope:actor = {
+			has_reform = government_reform:banking_country
+		}
+		# root is NOT a valid comparison target in interaction triggers
+		# ("Invalid right side" spam) — vanilla compares scope:actor directly.
+		scope:recipient ?= {
+			NOT = { this = scope:actor }
+			sm_commerce_book_value > 0
+			OR = {
+				NOT = { exists = var:sm_commerce_stake_owner }
+				AND = {
+					var:sm_commerce_stake_owner ?= scope:actor
+					var:sm_commerce_stake_pct < 1
+				}
+			}
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		column = {
+			data = name
+		}
+		# Cheap proxy trigger: the picker evaluates this for every country in the
+		# list, so no location-iterating script values here.
+		visible = {
+			monthly_income_trade_and_tax > 0
+		}
+		enabled = {
+			OR = {
+				NOT = { exists = var:sm_commerce_stake_owner }
+				AND = {
+					var:sm_commerce_stake_owner ?= scope:actor
+					var:sm_commerce_stake_pct < 1
+				}
+			}
+		}
+	}
+
+	effect = {
+		scope:actor = {
+			add_gold = {
+				value = scope:recipient.sm_commerce_buy_price
+				multiply = -1
+			}
+		}
+		scope:recipient = {
+			add_gold = sm_commerce_buy_price
+			set_variable = { name = sm_commerce_stake_owner value = scope:actor }
+			if = {
+				limit = { NOT = { exists = var:sm_commerce_stake_pct } }
+				set_variable = { name = sm_commerce_stake_pct value = 0 }
+			}
+			change_variable = { name = sm_commerce_stake_pct add = 0.1 }
+		}
+		# Ledger bookkeeping: see sm_buy_agriculture_stake.
+		scope:actor = {
+			if = {
+				limit = {
+					NOT = {
+						is_target_in_variable_list = {
+							name = sm_investment_targets
+							target = scope:recipient
+						}
+					}
+				}
+				add_to_variable_list = {
+					name = sm_investment_targets
+					target = scope:recipient
+				}
+			}
+			# Header totals update instantly, not at next month tick.
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	accept = {
+		add = { desc = "SM_ACCEPT_RELUCTANCE" value = -30 }
+		if = {
+			limit = { scope:recipient = { opinion = { target = scope:actor value >= 50 } } }
+			add = { desc = "SM_ACCEPT_TRUSTED" value = 20 }
+		}
+		if = {
+			limit = { scope:recipient = { opinion = { target = scope:actor value >= 100 } } }
+			add = { desc = "SM_ACCEPT_CLOSE" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { var:sm_commerce_stake_owner ?= scope:actor } }
+			add = { desc = "SM_ACCEPT_PARTNER" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { gold < 0 } }
+			add = { desc = "SM_ACCEPT_BROKE" value = 45 }
+		}
+		if = {
+			limit = { scope:recipient = { at_war = yes } }
+			add = { desc = "SM_ACCEPT_WAR" value = 25 }
+		}
+		if = {
+			limit = { scope:recipient = { stability < -25 } }
+			add = { desc = "SM_ACCEPT_UNREST" value = 15 }
+		}
+		if = {
+			limit = { scope:recipient = { is_at_war_with = scope:actor } }
+			add = { desc = "SM_ACCEPT_ENEMY" value = -1000 }
+		}
+	}
+
+	ai_will_do = {
+		value = 0
+	}
+}
