@@ -1,0 +1,16 @@
+# Investments — opinion modifiers (schema: vanilla 01_opinion_scripted_diplomacy.txt).
+
+# Applied by the invested country against the bank when a repurchase
+# offer is refused (reject_effect of the sm_buyback_* interactions).
+# Stacks with repeated refusals; the slow slide toward nationalization.
+sm_opinion_refused_buyback = {
+	value = -25
+	yearly_decay = 5
+}
+
+# Applied by the bank against a country that nationalized its
+# concessions (sm_nationalize_bank_stakes scripted effect).
+sm_opinion_nationalized_us = {
+	value = -100
+	yearly_decay = 5
+}

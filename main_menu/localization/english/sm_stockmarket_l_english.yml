@@ -6,7 +6,7 @@
 
  # --- Investments ledger (Phase 2) ---
  SM_EXCHANGE_TITLE: "Investments"
- SM_LEDGER_TITLE: "Foreign Investments"
+ SM_LEDGER_TITLE: "Investments"
  SM_LEDGER_HINT: "Investments are made and liquidated through diplomatic actions. Returns are paid on the 1st of each month."
  SM_COL_COUNTRY: "       Country" #adjustment to get the country header to line up with country column
  SM_SEC_AGRICULTURE: "Agriculture"
@@ -23,6 +23,15 @@
  SM_HDR_INCOME: "Total Monthly Returns"
  SM_HDR_VALUE: "Total Investment Value"
  SM_HDR_VALUE_SUB: "at current market prices"
+
+ # --- Foreign / Domestic tabs ---
+ SM_TAB_FOREIGN: "Foreign"
+ SM_TAB_FOREIGN_TT: "Our concessions abroad, and the returns they pay us."
+ SM_TAB_DOMESTIC: "Domestic"
+ SM_TAB_DOMESTIC_TT: "Foreign concessions in our own lands, and what they drain from our treasury."
+ SM_DOM_HDR_OUTFLOW: "Total Monthly Obligations"
+ SM_DOM_NONE: "Domestically held"
+ SM_DOM_HINT: "Foreign investors are paid on the 1st of each month, directly from our treasury. Sectors under enemy occupation pay nothing."
 
  # --- Accept-reason descriptions (shared across all investment offers) ---
  SM_ACCEPT_RELUCTANCE: "We do not part with our nation's patrimony lightly"
@@ -93,6 +102,70 @@
  sm_buy_commerce_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] invested in the commerce of [SCOPE.sCountry('recipient').GetName]."
  PROPOSE_sm_buy_commerce_stake: "Purchase a 10% commercial concession from $RECIPIENT$?\n\n$INFO$"
  sm_buy_commerce_stake_SELECT_TITLE: "Select a country whose commerce to invest in."
+
+ # --- Buyback offers (AI-initiated: the invested country asks the bank
+ #     to sell a 10% tranche back; concede = accept, refuse = decline) ---
+ SM_ACCEPT_BUYBACK: "Fair coin for what was always ours"
+ INCOMING_OFFER_sm_buyback_agriculture_stake: "An offer to repurchase their agricultural concession"
+ INCOMING_OFFER_TITLE_sm_buyback_agriculture_stake: "Agricultural Repurchase Offer"
+ INCOMING_OFFER_sm_buyback_mining_stake: "An offer to repurchase their mining concession"
+ INCOMING_OFFER_TITLE_sm_buyback_mining_stake: "Mining Repurchase Offer"
+ INCOMING_OFFER_sm_buyback_industry_stake: "An offer to repurchase their industrial concession"
+ INCOMING_OFFER_TITLE_sm_buyback_industry_stake: "Industrial Repurchase Offer"
+ INCOMING_OFFER_sm_buyback_commerce_stake: "An offer to repurchase their commercial concession"
+ INCOMING_OFFER_TITLE_sm_buyback_commerce_stake: "Commercial Repurchase Offer"
+
+ sm_buyback_agriculture_stake: "Repurchase Agricultural Concession"
+ dip_sm_buyback_agriculture_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_buyback_agriculture_stake_act: "Offer to repurchase a 10% agricultural concession from [SCOPE.sCountry('recipient').GetName]"
+ sm_buyback_agriculture_stake_desc: "Our farms and estates should answer to our own crown. We offer the concession holder fair market value — paid from our treasury — to return one tenth of the sector."
+ sm_buyback_agriculture_stake_effect_text: "[SCOPE.sCountry('actor').GetName] repurchased an agricultural concession from [SCOPE.sCountry('recipient').GetName]."
+ sm_buyback_agriculture_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] repurchased an agricultural concession from [SCOPE.sCountry('recipient').GetName]."
+ sm_buyback_agriculture_stake_reject_effect_text: "We refuse to part with our agricultural concession in [SCOPE.sCountry('actor').GetName]."
+ sm_buyback_agriculture_stake_reject_effect_text_past: "We refused to part with our agricultural concession in [SCOPE.sCountry('actor').GetName]."
+ PROPOSE_sm_buyback_agriculture_stake: "Offer to repurchase a 10% agricultural concession from $RECIPIENT$?\n\n$INFO$"
+ sm_buyback_agriculture_stake_SELECT_TITLE: "Select the holder of your agricultural concession."
+
+ sm_buyback_mining_stake: "Repurchase Mining Concession"
+ dip_sm_buyback_mining_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_buyback_mining_stake_act: "Offer to repurchase a 10% mining concession from [SCOPE.sCountry('recipient').GetName]"
+ sm_buyback_mining_stake_desc: "Our mines are the crown's jewels, and they sit in a foreigner's ledger. We offer the concession holder fair market value — paid from our treasury — to return one tenth of the sector."
+ sm_buyback_mining_stake_effect_text: "[SCOPE.sCountry('actor').GetName] repurchased a mining concession from [SCOPE.sCountry('recipient').GetName]."
+ sm_buyback_mining_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] repurchased a mining concession from [SCOPE.sCountry('recipient').GetName]."
+ sm_buyback_mining_stake_reject_effect_text: "We refuse to part with our mining concession in [SCOPE.sCountry('actor').GetName]."
+ sm_buyback_mining_stake_reject_effect_text_past: "We refused to part with our mining concession in [SCOPE.sCountry('actor').GetName]."
+ PROPOSE_sm_buyback_mining_stake: "Offer to repurchase a 10% mining concession from $RECIPIENT$?\n\n$INFO$"
+ sm_buyback_mining_stake_SELECT_TITLE: "Select the holder of your mining concession."
+
+ sm_buyback_industry_stake: "Repurchase Industrial Concession"
+ dip_sm_buyback_industry_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_buyback_industry_stake_act: "Offer to repurchase a 10% industrial concession from [SCOPE.sCountry('recipient').GetName]"
+ sm_buyback_industry_stake_desc: "Our workshops and manufactories should labor for our own treasury. We offer the concession holder fair market value — paid from our treasury — to return one tenth of the sector."
+ sm_buyback_industry_stake_effect_text: "[SCOPE.sCountry('actor').GetName] repurchased an industrial concession from [SCOPE.sCountry('recipient').GetName]."
+ sm_buyback_industry_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] repurchased an industrial concession from [SCOPE.sCountry('recipient').GetName]."
+ sm_buyback_industry_stake_reject_effect_text: "We refuse to part with our industrial concession in [SCOPE.sCountry('actor').GetName]."
+ sm_buyback_industry_stake_reject_effect_text_past: "We refused to part with our industrial concession in [SCOPE.sCountry('actor').GetName]."
+ PROPOSE_sm_buyback_industry_stake: "Offer to repurchase a 10% industrial concession from $RECIPIENT$?\n\n$INFO$"
+ sm_buyback_industry_stake_SELECT_TITLE: "Select the holder of your industrial concession."
+
+ sm_buyback_commerce_stake: "Repurchase Commercial Concession"
+ dip_sm_buyback_commerce_stake_CATEGORY: "CATEGORY_ECONOMY_ACTIONS"
+ sm_buyback_commerce_stake_act: "Offer to repurchase a 10% commercial concession from [SCOPE.sCountry('recipient').GetName]"
+ sm_buyback_commerce_stake_desc: "Our customs houses and market dues should fill our own coffers. We offer the concession holder fair market value — paid from our treasury — to return one tenth of the sector."
+ sm_buyback_commerce_stake_effect_text: "[SCOPE.sCountry('actor').GetName] repurchased a commercial concession from [SCOPE.sCountry('recipient').GetName]."
+ sm_buyback_commerce_stake_effect_text_past: "[SCOPE.sCountry('actor').GetName] repurchased a commercial concession from [SCOPE.sCountry('recipient').GetName]."
+ sm_buyback_commerce_stake_reject_effect_text: "We refuse to part with our commercial concession in [SCOPE.sCountry('actor').GetName]."
+ sm_buyback_commerce_stake_reject_effect_text_past: "We refused to part with our commercial concession in [SCOPE.sCountry('actor').GetName]."
+ PROPOSE_sm_buyback_commerce_stake: "Offer to repurchase a 10% commercial concession from $RECIPIENT$?\n\n$INFO$"
+ sm_buyback_commerce_stake_SELECT_TITLE: "Select the holder of your commercial concession."
+
+ # --- Nationalization ---
+ sm_opinion_refused_buyback: "Refused to Return Our Concession"
+ sm_opinion_nationalized_us: "Nationalized Our Concessions"
+ sm_nationalizer_stigma: "Confiscated Foreign Concessions"
+ sm_events.1.title: "Concessions Nationalized!"
+ sm_events.1.desc: "[SCOPE.sCountry('sm_nationalizer').GetName] has seized every concession we held in its lands. Our agents are expelled, our ledgers struck through, and not a coin of compensation offered. The affront will not be forgotten — and such a seizure is ample cause for war."
+ sm_events.1.a: "They will answer for this."
 
  # --- Divest: Agriculture ---
  sm_sell_agriculture_stake: "Divest from Agriculture"

@@ -159,13 +159,15 @@ type sm_ledger_content = vbox {
 	}
 
 	# --- Column headers on an economy-green band ---
-	# The cells live in a FIXED-width hbox: exactly the sum of the cells
-	# and gaps (530), zero slack. Layout boxes redistribute any leftover
-	# width between children — and expand = {} grabs a share rather than
-	# soaking slack — so a header whose slack differs from the rows'
-	# renders a different column pitch and visibly drifts (seen on-screen
-	# twice). The rows use the same fixed-width inner hbox; both start at
-	# x = 18 (row outer 10 + card inner 8).
+	# Header cells are ABSOLUTELY POSITIONED child widgets (Rob,
+	# 2026-07-03), NOT an hbox. Every hbox attempt drifted against the
+	# rows — including a fixed-width zero-slack hbox — because the engine
+	# stretches/redistributes hbox children in ways the cell arithmetic
+	# does not predict (the rows' real on-screen pitch is ~107px, not the
+	# 84px their 80px cells + 4 spacing imply). These x-positions
+	# (0/139/246/353/459 inside a container at x = 18) were tuned against
+	# the RENDERED row positions; if the row layout changes, retune
+	# visually — recomputing from cell widths will not match.
 	widget = {
 		layoutpolicy_horizontal = expanding
 		size = { -1 56 }
@@ -307,8 +309,11 @@ type sm_ledger_content = vbox {
 								using = layoutpolicy_expanding
 								using = bg_scroll_card
 
-								# Fixed-width inner hbox: zero slack, so the engine
-								# cannot redistribute the cells — see header comment.
+								# NOTE: the fixed width does NOT stop the engine from
+								# stretching this hbox (rendered pitch ~107px, not the
+								# 84px the cells imply). The header above is positioned
+								# to match the RENDERED cells — if you touch this hbox,
+								# retune the header visually. See header comment.
 								hbox = {
 									position = { 8 3 }
 									size = { 514 48 }
@@ -675,6 +680,414 @@ type sm_ledger_content = vbox {
 	}
 }
 
+# The DOMESTIC tab: who owns pieces of US. One fixed card per sector
+# (no datamodel — there are always exactly four), showing the foreign
+# concession holder, their share, and the monthly drain on OUR treasury.
+# The drain numbers are the same paying-book math the pulse actually
+# debits, so this tab is the victim's-eye view of the gold that
+# sm_market_monthly_pulse subtracts every month.
+# Owner promotion: country-scope variable -> datacontext via
+# MakeScope.GetVariable('x').GetCountry (vanilla: sengoku.gui,
+# golden_age_of_piracy.gui, incl. per-frame use while possibly unset).
+# Layout inside each card is ABSOLUTE positions + anchors — no hboxes
+# across rows, so nothing can drift (see the column-header lesson).
+type sm_ledger_domestic = vbox {
+	using = layoutpolicy_expanding
+
+	# --- Total monthly outflow on one paper card ---
+	hbox = {
+		layoutpolicy_horizontal = expanding
+		margin = { 10 6 }
+
+		widget = {
+			layoutpolicy_horizontal = expanding
+			size = { -1 130 }
+			using = bg_scroll_card
+
+			vbox = {
+				parentanchor = center
+				spacing = 6
+
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					text = "SM_DOM_HDR_OUTFLOW"
+					default_format = "#low"
+					fontsize = 14
+				}
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					raw_text = "#R -[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_total_outflow')|2]#!@gold!"
+					fontsize = 28
+				}
+				text_single = {
+					autoresize = yes
+					align = center|nobaseline
+					text = "SM_PER_MONTH"
+					default_format = "#low"
+					fontsize = 12
+				}
+			}
+		}
+	}
+
+	# --- Four sector cards ---
+	scrollarea = {
+		using = layoutpolicy_expanding
+		scrollbarpolicy_horizontal = always_off
+
+		scrollbar_vertical = {
+			using = Scrollbar_Vertical
+		}
+
+		scrollwidget = {
+			vbox = {
+				# --- Agriculture ---
+				widget = {
+					layoutpolicy_horizontal = expanding
+					size = { -1 60 }
+
+					hbox = {
+						margin = { 10 3 }
+
+						widget = {
+							using = layoutpolicy_expanding
+							using = bg_scroll_card
+
+							icon = {
+								position = { 12 14 }
+								size = { 26 26 }
+								texture = "gfx/interface/icons/trade_goods/icon_goods_wheat.dds"
+							}
+							text_single = {
+								position = { 46 17 }
+								size = { 118 20 }
+								align = left|nobaseline
+								text = "SM_SEC_AGRICULTURE"
+								default_format = "#yellow_titles"
+								fontsize = 14
+							}
+
+							# Foreign holder (flag + name) when the sector is sold
+							widget = {
+								position = { 172 0 }
+								size = { 200 54 }
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_agriculture_pct'), '(CFixedPoint)0')]"
+								datacontext = "[GetPlayer.MakeScope.GetVariable('sm_agriculture_stake_owner').GetCountry]"
+
+								hbox = {
+									parentanchor = left|vcenter
+									spacing = 6
+									country_flag_small = {}
+									text_single = {
+										autoresize = no
+										size = { 150 22 }
+										align = left|nobaseline
+										text = "[Country.GetNameWithNoTooltip]"
+										fontsize = 14
+										tooltipwidget = {
+											using = CountryTooltip
+										}
+									}
+								}
+							}
+							# ...or reassurance when it is still ours
+							text_single = {
+								position = { 172 17 }
+								size = { 200 20 }
+								align = left|nobaseline
+								visible = "[Not(GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_agriculture_pct'), '(CFixedPoint)0'))]"
+								text = "SM_DOM_NONE"
+								default_format = "#weak"
+								fontsize = 14
+							}
+
+							# Their share + what it costs us, right-anchored
+							text_single = {
+								parentanchor = top|right
+								widgetanchor = top|right
+								position = { -12 8 }
+								size = { 110 20 }
+								align = right|nobaseline
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_agriculture_pct'), '(CFixedPoint)0')]"
+								raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_agriculture_pct')|0]%"
+								fontsize = 15
+							}
+							text_single = {
+								parentanchor = top|right
+								widgetanchor = top|right
+								position = { -12 28 }
+								size = { 110 16 }
+								align = right|nobaseline
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_agriculture_pct'), '(CFixedPoint)0')]"
+								raw_text = "#R -[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_agriculture_outflow')|2]#!@gold!"
+								fontsize = 12
+							}
+						}
+					}
+				}
+
+				# --- Mining ---
+				widget = {
+					layoutpolicy_horizontal = expanding
+					size = { -1 60 }
+
+					hbox = {
+						margin = { 10 3 }
+
+						widget = {
+							using = layoutpolicy_expanding
+							using = bg_scroll_card
+
+							icon = {
+								position = { 12 14 }
+								size = { 26 26 }
+								texture = "gfx/interface/icons/trade_goods/icon_goods_iron.dds"
+							}
+							text_single = {
+								position = { 46 17 }
+								size = { 118 20 }
+								align = left|nobaseline
+								text = "SM_SEC_MINING"
+								default_format = "#yellow_titles"
+								fontsize = 14
+							}
+
+							widget = {
+								position = { 172 0 }
+								size = { 200 54 }
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_mining_pct'), '(CFixedPoint)0')]"
+								datacontext = "[GetPlayer.MakeScope.GetVariable('sm_mining_stake_owner').GetCountry]"
+
+								hbox = {
+									parentanchor = left|vcenter
+									spacing = 6
+									country_flag_small = {}
+									text_single = {
+										autoresize = no
+										size = { 150 22 }
+										align = left|nobaseline
+										text = "[Country.GetNameWithNoTooltip]"
+										fontsize = 14
+										tooltipwidget = {
+											using = CountryTooltip
+										}
+									}
+								}
+							}
+							text_single = {
+								position = { 172 17 }
+								size = { 200 20 }
+								align = left|nobaseline
+								visible = "[Not(GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_mining_pct'), '(CFixedPoint)0'))]"
+								text = "SM_DOM_NONE"
+								default_format = "#weak"
+								fontsize = 14
+							}
+
+							text_single = {
+								parentanchor = top|right
+								widgetanchor = top|right
+								position = { -12 8 }
+								size = { 110 20 }
+								align = right|nobaseline
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_mining_pct'), '(CFixedPoint)0')]"
+								raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_mining_pct')|0]%"
+								fontsize = 15
+							}
+							text_single = {
+								parentanchor = top|right
+								widgetanchor = top|right
+								position = { -12 28 }
+								size = { 110 16 }
+								align = right|nobaseline
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_mining_pct'), '(CFixedPoint)0')]"
+								raw_text = "#R -[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_mining_outflow')|2]#!@gold!"
+								fontsize = 12
+							}
+						}
+					}
+				}
+
+				# --- Industry ---
+				widget = {
+					layoutpolicy_horizontal = expanding
+					size = { -1 60 }
+
+					hbox = {
+						margin = { 10 3 }
+
+						widget = {
+							using = layoutpolicy_expanding
+							using = bg_scroll_card
+
+							icon = {
+								position = { 12 14 }
+								size = { 26 26 }
+								texture = "gfx/interface/icons/trade_goods/icon_goods_tools.dds"
+							}
+							text_single = {
+								position = { 46 17 }
+								size = { 118 20 }
+								align = left|nobaseline
+								text = "SM_SEC_INDUSTRY"
+								default_format = "#yellow_titles"
+								fontsize = 14
+							}
+
+							widget = {
+								position = { 172 0 }
+								size = { 200 54 }
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_industry_pct'), '(CFixedPoint)0')]"
+								datacontext = "[GetPlayer.MakeScope.GetVariable('sm_industry_stake_owner').GetCountry]"
+
+								hbox = {
+									parentanchor = left|vcenter
+									spacing = 6
+									country_flag_small = {}
+									text_single = {
+										autoresize = no
+										size = { 150 22 }
+										align = left|nobaseline
+										text = "[Country.GetNameWithNoTooltip]"
+										fontsize = 14
+										tooltipwidget = {
+											using = CountryTooltip
+										}
+									}
+								}
+							}
+							text_single = {
+								position = { 172 17 }
+								size = { 200 20 }
+								align = left|nobaseline
+								visible = "[Not(GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_industry_pct'), '(CFixedPoint)0'))]"
+								text = "SM_DOM_NONE"
+								default_format = "#weak"
+								fontsize = 14
+							}
+
+							text_single = {
+								parentanchor = top|right
+								widgetanchor = top|right
+								position = { -12 8 }
+								size = { 110 20 }
+								align = right|nobaseline
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_industry_pct'), '(CFixedPoint)0')]"
+								raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_industry_pct')|0]%"
+								fontsize = 15
+							}
+							text_single = {
+								parentanchor = top|right
+								widgetanchor = top|right
+								position = { -12 28 }
+								size = { 110 16 }
+								align = right|nobaseline
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_industry_pct'), '(CFixedPoint)0')]"
+								raw_text = "#R -[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_industry_outflow')|2]#!@gold!"
+								fontsize = 12
+							}
+						}
+					}
+				}
+
+				# --- Commerce ---
+				widget = {
+					layoutpolicy_horizontal = expanding
+					size = { -1 60 }
+
+					hbox = {
+						margin = { 10 3 }
+
+						widget = {
+							using = layoutpolicy_expanding
+							using = bg_scroll_card
+
+							icon = {
+								position = { 12 14 }
+								size = { 26 26 }
+								texture = "gfx/interface/icons/building_categories/trade_category.dds"
+							}
+							text_single = {
+								position = { 46 17 }
+								size = { 118 20 }
+								align = left|nobaseline
+								text = "SM_SEC_COMMERCE"
+								default_format = "#yellow_titles"
+								fontsize = 14
+							}
+
+							widget = {
+								position = { 172 0 }
+								size = { 200 54 }
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_commerce_pct'), '(CFixedPoint)0')]"
+								datacontext = "[GetPlayer.MakeScope.GetVariable('sm_commerce_stake_owner').GetCountry]"
+
+								hbox = {
+									parentanchor = left|vcenter
+									spacing = 6
+									country_flag_small = {}
+									text_single = {
+										autoresize = no
+										size = { 150 22 }
+										align = left|nobaseline
+										text = "[Country.GetNameWithNoTooltip]"
+										fontsize = 14
+										tooltipwidget = {
+											using = CountryTooltip
+										}
+									}
+								}
+							}
+							text_single = {
+								position = { 172 17 }
+								size = { 200 20 }
+								align = left|nobaseline
+								visible = "[Not(GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_commerce_pct'), '(CFixedPoint)0'))]"
+								text = "SM_DOM_NONE"
+								default_format = "#weak"
+								fontsize = 14
+							}
+
+							text_single = {
+								parentanchor = top|right
+								widgetanchor = top|right
+								position = { -12 8 }
+								size = { 110 20 }
+								align = right|nobaseline
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_commerce_pct'), '(CFixedPoint)0')]"
+								raw_text = "[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_commerce_pct')|0]%"
+								fontsize = 15
+							}
+							text_single = {
+								parentanchor = top|right
+								widgetanchor = top|right
+								position = { -12 28 }
+								size = { 110 16 }
+								align = right|nobaseline
+								visible = "[GreaterThan_CFixedPoint(GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_commerce_pct'), '(CFixedPoint)0')]"
+								raw_text = "#R -[GuiScope.SetRoot(GetPlayer.MakeScope).ScriptValue('sm_gui_dom_commerce_outflow')|2]#!@gold!"
+								fontsize = 12
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	# --- Footer hint ---
+	text_multi = {
+		layoutpolicy_horizontal = expanding
+		margin = { 14 6 }
+		autoresize = yes
+		text = "SM_DOM_HINT"
+		default_format = "#low"
+		fontsize = 13
+	}
+}
+
 # The Foreign Investments ledger: read-only, styled and positioned like
 # the real left lateral views via the passive vanilla templates.
 # Instantiated inside the root widget of the ingame_topbar.gui override.
@@ -720,7 +1133,42 @@ type sm_stock_ledger = widget {
 					}
 				}
 
-				sm_ledger_content = {}
+				# Foreign / Domestic tabs — vanilla's lateral-view tab
+				# button (economy view precedent); tab state is pure UI
+				# state in the variable system. Unset = Foreign, the
+				# same unset-means-first-tab idiom as game_rules.gui.
+				hbox = {
+					layoutpolicy_horizontal = expanding
+					margin = { 8 4 }
+					spacing = 4
+
+					button_main_tab_alt = {
+						using = layoutpolicy_expanding
+						down = "[Or(Not(GetVariableSystem.Exists('sm_ledger_tab')), GetVariableSystem.HasValue('sm_ledger_tab', 'foreign'))]"
+						blockoverride "tab_text" { text = "SM_TAB_FOREIGN" }
+						action_tooltip = {
+							title = "SM_TAB_FOREIGN_TT"
+							on_action = "[GetVariableSystem.Set('sm_ledger_tab', 'foreign')]"
+						}
+					}
+
+					button_main_tab_alt = {
+						using = layoutpolicy_expanding
+						down = "[GetVariableSystem.HasValue('sm_ledger_tab', 'domestic')]"
+						blockoverride "tab_text" { text = "SM_TAB_DOMESTIC" }
+						action_tooltip = {
+							title = "SM_TAB_DOMESTIC_TT"
+							on_action = "[GetVariableSystem.Set('sm_ledger_tab', 'domestic')]"
+						}
+					}
+				}
+
+				sm_ledger_content = {
+					visible = "[Not(GetVariableSystem.HasValue('sm_ledger_tab', 'domestic'))]"
+				}
+				sm_ledger_domestic = {
+					visible = "[GetVariableSystem.HasValue('sm_ledger_tab', 'domestic')]"
+				}
 			}
 
 			button_close = {

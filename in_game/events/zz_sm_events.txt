@@ -1,0 +1,22 @@
+namespace = sm_events
+
+# Notifies the bank that a country has nationalized every concession the
+# bank held there. Fired from sm_nationalize_bank_stakes (scripted
+# effect, called by the monthly pulse's temper roll).
+#   root                    = the bank (event recipient)
+#   scope:sm_nationalizer   = the seizing country (permanent save_scope_as —
+#                             only permanent scopes survive into events)
+# No is_triggered_only field in EU5: effect-fired events simply have no
+# self-trigger; the "orphaned" log line is harmless.
+sm_events.1 = {
+	type = country_event
+	title = sm_events.1.title
+	desc = sm_events.1.desc
+	outcome = negative
+
+	image = "gfx/interface/illustrations/institutions/banking.dds"
+
+	option = {
+		name = sm_events.1.a
+	}
+}

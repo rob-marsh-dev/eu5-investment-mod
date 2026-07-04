@@ -63,6 +63,69 @@ sm_commerce_book_value = {
 }
 
 # ------------------------------------------------------------------
+# Paying book values — the part of each sector the target still
+# CONTROLS. Occupied locations produce nothing for a concession holder,
+# so dividends pay on these (dividend suspension, Phase 3). Market
+# prices deliberately stay on the FULL book: occupation does not change
+# what the concession is worth once the war ends (Rob, 2026-07-03 —
+# keep prices high; pricing already has its own war/occupation
+# multipliers in sm_market_situation_mult).
+# Commerce has no paying variant — its book is capitalized
+# monthly_income_trade_and_tax, which already collapses when land is
+# occupied, so its dividend self-suspends.
+# ------------------------------------------------------------------
+
+sm_agriculture_paying_book_value = {
+	every_owned_location = {
+		limit = {
+			raw_material ?= { goods_method = farming }
+			controller = prev
+		}
+		add = 25
+	}
+}
+
+sm_mining_paying_book_value = {
+	every_owned_location = {
+		limit = {
+			raw_material ?= { goods_method = mining }
+			controller = prev
+		}
+		add = 80
+	}
+	every_owned_location = {
+		limit = {
+			OR = {
+				raw_material ?= goods:goods_gold
+				raw_material ?= goods:silver
+				raw_material ?= goods:gems
+			}
+			controller = prev
+		}
+		add = 150
+	}
+}
+
+sm_industry_paying_book_value = {
+	every_owned_location = {
+		limit = { controller = prev }
+		every_buildings_in_location = {
+			limit = {
+				OR = {
+					building_category = basic_industry_category
+					building_category = weapons_industry_category
+					building_category = consumer_goods_category
+				}
+			}
+			add = {
+				value = building_level
+				multiply = 12
+			}
+		}
+	}
+}
+
+# ------------------------------------------------------------------
 # Market conditions
 # ------------------------------------------------------------------
 
@@ -129,14 +192,21 @@ sm_commerce_market_value = {
 
 # ------------------------------------------------------------------
 # Tranche prices — every purchase or sale moves 10% of the sector.
-# Buying carries a 25% concession premium (nobody parts with their patrimony
-# at fair value); selling eats a 15% illiquidity haircut (the target is the
-# only buyer, and they know it). The spread is the market maker's revenge.
+# BUYING pays a slight fee for the right to purchase (Rob, 2026-07-03):
+#   x0.125  = the 10% tranche's estimated value +25% purchase fee
+#   +10     = flat notary's fee, the floor that keeps land rights in
+#             one-village nations from going for pocket change
+# SELLING eats the 15% illiquidity haircut (x0.085) — the spread is the
+# market maker's revenge.
+# AI BUYBACK (concede) pays plain market value for the tranche (x0.10,
+# no premium, no fees — sm_<sector>_buyback_price below): fees are for
+# ACQUIRING rights, not for a country reclaiming its own.
 # ------------------------------------------------------------------
 
 sm_agriculture_buy_price = {
 	value = sm_agriculture_market_value
 	multiply = 0.125
+	add = 10
 }
 sm_agriculture_sell_price = {
 	value = sm_agriculture_market_value
@@ -146,6 +216,7 @@ sm_agriculture_sell_price = {
 sm_mining_buy_price = {
 	value = sm_mining_market_value
 	multiply = 0.125
+	add = 10
 }
 sm_mining_sell_price = {
 	value = sm_mining_market_value
@@ -155,6 +226,7 @@ sm_mining_sell_price = {
 sm_industry_buy_price = {
 	value = sm_industry_market_value
 	multiply = 0.125
+	add = 10
 }
 sm_industry_sell_price = {
 	value = sm_industry_market_value
@@ -164,10 +236,89 @@ sm_industry_sell_price = {
 sm_commerce_buy_price = {
 	value = sm_commerce_market_value
 	multiply = 0.125
+	add = 10
 }
 sm_commerce_sell_price = {
 	value = sm_commerce_market_value
 	multiply = 0.085
+}
+
+# What a country pays the bank when a buyback offer is conceded: the
+# tranche's plain market value (Rob: AI offers to buy at market value —
+# no premium, no fees). Sits between the bank's voluntary sell price
+# (0.085) and what re-buying the tranche would cost (0.125 + 10).
+sm_agriculture_buyback_price = {
+	value = sm_agriculture_market_value
+	multiply = 0.10
+}
+sm_mining_buyback_price = {
+	value = sm_mining_market_value
+	multiply = 0.10
+}
+sm_industry_buyback_price = {
+	value = sm_industry_market_value
+	multiply = 0.10
+}
+sm_commerce_buyback_price = {
+	value = sm_commerce_market_value
+	multiply = 0.10
+}
+
+# ------------------------------------------------------------------
+# Stake market value — what the foreign-held fraction of a sector is
+# worth at current cached market prices. Evaluated on the INVESTED
+# country. Reads ONLY cached variables: this feeds the buyback
+# ai_will_do reserve ladder (evaluated across countries by the AI), so
+# no location iteration is allowed here.
+# ------------------------------------------------------------------
+
+sm_agriculture_stake_market = {
+	if = {
+		limit = {
+			exists = var:sm_agriculture_stake_pct
+			exists = var:sm_agriculture_value
+		}
+		add = {
+			value = var:sm_agriculture_value
+			multiply = var:sm_agriculture_stake_pct
+		}
+	}
+}
+sm_mining_stake_market = {
+	if = {
+		limit = {
+			exists = var:sm_mining_stake_pct
+			exists = var:sm_mining_value
+		}
+		add = {
+			value = var:sm_mining_value
+			multiply = var:sm_mining_stake_pct
+		}
+	}
+}
+sm_industry_stake_market = {
+	if = {
+		limit = {
+			exists = var:sm_industry_stake_pct
+			exists = var:sm_industry_value
+		}
+		add = {
+			value = var:sm_industry_value
+			multiply = var:sm_industry_stake_pct
+		}
+	}
+}
+sm_commerce_stake_market = {
+	if = {
+		limit = {
+			exists = var:sm_commerce_stake_pct
+			exists = var:sm_commerce_value
+		}
+		add = {
+			value = var:sm_commerce_value
+			multiply = var:sm_commerce_stake_pct
+		}
+	}
 }
 
 # ------------------------------------------------------------------
@@ -176,22 +327,46 @@ sm_commerce_sell_price = {
 # roughly 7.2%/year on book, ~5.8% on a full-premium purchase. Buying
 # the dip is how you get rich. Only evaluated when a stake owner exists,
 # so the pct variable is guaranteed set.
+# SUSPENSION: agriculture/mining/industry pay on the PAYING book —
+# occupied locations pay nothing until liberated. The pulse caches
+# sm_X_paying_book right before paying, so the cached read is the
+# normal path; the live iteration is only a fallback for a save whose
+# first pulse hasn't run yet. Commerce pays on full book because its
+# book is income-based and already shrinks under occupation.
 # ------------------------------------------------------------------
 
 sm_agriculture_dividend = {
-	value = sm_agriculture_book_value
+	if = {
+		limit = { exists = var:sm_agriculture_paying_book }
+		value = var:sm_agriculture_paying_book
+	}
+	else = {
+		value = sm_agriculture_paying_book_value
+	}
 	multiply = var:sm_agriculture_stake_pct
 	multiply = 0.006
 }
 
 sm_mining_dividend = {
-	value = sm_mining_book_value
+	if = {
+		limit = { exists = var:sm_mining_paying_book }
+		value = var:sm_mining_paying_book
+	}
+	else = {
+		value = sm_mining_paying_book_value
+	}
 	multiply = var:sm_mining_stake_pct
 	multiply = 0.006
 }
 
 sm_industry_dividend = {
-	value = sm_industry_book_value
+	if = {
+		limit = { exists = var:sm_industry_paying_book }
+		value = var:sm_industry_paying_book
+	}
+	else = {
+		value = sm_industry_paying_book_value
+	}
 	multiply = var:sm_industry_stake_pct
 	multiply = 0.006
 }
@@ -245,15 +420,16 @@ sm_gui_commerce_value = {
 	}
 }
 
-# Tranche prices from the cached market value: same premium/haircut as the
-# interactions. GUI purchases charge exactly the number on screen.
-sm_gui_agriculture_buy_price = { value = sm_gui_agriculture_value multiply = 0.125 }
+# Tranche prices from the cached market value: same fee/haircut as the
+# interactions (x0.125 + 10 buy, x0.085 sell — see the pricing comment
+# above). The tooltip must show exactly what a purchase charges.
+sm_gui_agriculture_buy_price = { value = sm_gui_agriculture_value multiply = 0.125 add = 10 }
 sm_gui_agriculture_sell_price = { value = sm_gui_agriculture_value multiply = 0.085 }
-sm_gui_mining_buy_price = { value = sm_gui_mining_value multiply = 0.125 }
+sm_gui_mining_buy_price = { value = sm_gui_mining_value multiply = 0.125 add = 10 }
 sm_gui_mining_sell_price = { value = sm_gui_mining_value multiply = 0.085 }
-sm_gui_industry_buy_price = { value = sm_gui_industry_value multiply = 0.125 }
+sm_gui_industry_buy_price = { value = sm_gui_industry_value multiply = 0.125 add = 10 }
 sm_gui_industry_sell_price = { value = sm_gui_industry_value multiply = 0.085 }
-sm_gui_commerce_buy_price = { value = sm_gui_commerce_value multiply = 0.125 }
+sm_gui_commerce_buy_price = { value = sm_gui_commerce_value multiply = 0.125 add = 10 }
 sm_gui_commerce_sell_price = { value = sm_gui_commerce_value multiply = 0.085 }
 
 # The investor's stake as 0–100 (0 when the sector is unowned or rival-held).
@@ -290,7 +466,10 @@ sm_gui_commerce_my_stake = {
 	}
 }
 
-# Monthly dividend the investor currently draws from each sector (cached book).
+# Monthly dividend the investor currently draws from each sector.
+# Reads the cached PAYING book (occupied land pays nothing) so the
+# ledger shows what actually arrives; falls back to the full book only
+# until the target's first pulse writes the paying cache.
 sm_gui_agriculture_dividend = {
 	scope:target ?= {
 		if = {
@@ -300,6 +479,10 @@ sm_gui_agriculture_dividend = {
 			}
 			add = {
 				value = var:sm_agriculture_book
+				if = {
+					limit = { exists = var:sm_agriculture_paying_book }
+					value = var:sm_agriculture_paying_book
+				}
 				multiply = var:sm_agriculture_stake_pct
 				multiply = 0.006
 			}
@@ -315,6 +498,10 @@ sm_gui_mining_dividend = {
 			}
 			add = {
 				value = var:sm_mining_book
+				if = {
+					limit = { exists = var:sm_mining_paying_book }
+					value = var:sm_mining_paying_book
+				}
 				multiply = var:sm_mining_stake_pct
 				multiply = 0.006
 			}
@@ -330,6 +517,10 @@ sm_gui_industry_dividend = {
 			}
 			add = {
 				value = var:sm_industry_book
+				if = {
+					limit = { exists = var:sm_industry_paying_book }
+					value = var:sm_industry_paying_book
+				}
 				multiply = var:sm_industry_stake_pct
 				multiply = 0.006
 			}
@@ -411,6 +602,115 @@ sm_gui_my_dividends_here = {
 	add = sm_gui_mining_dividend
 	add = sm_gui_industry_dividend
 	add = sm_gui_commerce_dividend
+}
+
+# ------------------------------------------------------------------
+# DOMESTIC view (the ledger's second tab): root = the player as the
+# TARGET of foreign investment — who owns pieces of US, and what it
+# bleeds from our treasury every month. No scope:target; everything
+# reads the player's own cached variables (stake owner/pct are set by
+# the interactions, books by the pulse), so all per-frame safe.
+# ------------------------------------------------------------------
+
+# Foreign-held share of each sector, 0–100 (0 = domestically held).
+sm_gui_dom_agriculture_pct = {
+	if = {
+		limit = { exists = var:sm_agriculture_stake_owner }
+		add = { value = var:sm_agriculture_stake_pct multiply = 100 }
+	}
+}
+sm_gui_dom_mining_pct = {
+	if = {
+		limit = { exists = var:sm_mining_stake_owner }
+		add = { value = var:sm_mining_stake_pct multiply = 100 }
+	}
+}
+sm_gui_dom_industry_pct = {
+	if = {
+		limit = { exists = var:sm_industry_stake_owner }
+		add = { value = var:sm_industry_stake_pct multiply = 100 }
+	}
+}
+sm_gui_dom_commerce_pct = {
+	if = {
+		limit = { exists = var:sm_commerce_stake_owner }
+		add = { value = var:sm_commerce_stake_pct multiply = 100 }
+	}
+}
+
+# What each foreign-held sector drains from OUR treasury per month —
+# the same paying-book formula the pulse pays out (occupied land is
+# suspended, so the drain shown is the drain felt).
+sm_gui_dom_agriculture_outflow = {
+	if = {
+		limit = {
+			exists = var:sm_agriculture_stake_owner
+			exists = var:sm_agriculture_book
+		}
+		add = {
+			value = var:sm_agriculture_book
+			if = {
+				limit = { exists = var:sm_agriculture_paying_book }
+				value = var:sm_agriculture_paying_book
+			}
+			multiply = var:sm_agriculture_stake_pct
+			multiply = 0.006
+		}
+	}
+}
+sm_gui_dom_mining_outflow = {
+	if = {
+		limit = {
+			exists = var:sm_mining_stake_owner
+			exists = var:sm_mining_book
+		}
+		add = {
+			value = var:sm_mining_book
+			if = {
+				limit = { exists = var:sm_mining_paying_book }
+				value = var:sm_mining_paying_book
+			}
+			multiply = var:sm_mining_stake_pct
+			multiply = 0.006
+		}
+	}
+}
+sm_gui_dom_industry_outflow = {
+	if = {
+		limit = {
+			exists = var:sm_industry_stake_owner
+			exists = var:sm_industry_book
+		}
+		add = {
+			value = var:sm_industry_book
+			if = {
+				limit = { exists = var:sm_industry_paying_book }
+				value = var:sm_industry_paying_book
+			}
+			multiply = var:sm_industry_stake_pct
+			multiply = 0.006
+		}
+	}
+}
+sm_gui_dom_commerce_outflow = {
+	if = {
+		limit = {
+			exists = var:sm_commerce_stake_owner
+			exists = var:sm_commerce_book
+		}
+		add = {
+			value = var:sm_commerce_book
+			multiply = var:sm_commerce_stake_pct
+			multiply = 0.006
+		}
+	}
+}
+
+sm_gui_dom_total_outflow = {
+	add = sm_gui_dom_agriculture_outflow
+	add = sm_gui_dom_mining_outflow
+	add = sm_gui_dom_industry_outflow
+	add = sm_gui_dom_commerce_outflow
 }
 
 # Portfolio totals for the ledger header: cached on the INVESTOR by

@@ -1,12 +1,73 @@
 # The Stock Exchange — shared effects.
 
+# NATIONALIZATION: root (the invested country) seizes EVERY concession
+# scope:sm_bank holds here, at once (Rob: all sectors, one dramatic
+# event). Called from the monthly pulse's temper roll. No compensation —
+# that is what seizure means. Consequences:
+#   - root wears sm_nationalizer_stigma for 10 years (improve-relations
+#     and diplomatic-reputation debuff),
+#   - the bank's opinion of root craters (sm_opinion_nationalized_us),
+#   - the bank gets cb_cut_down_in_size against root (grant-only vanilla
+#     CB — create_enabled = { always = no } — made for scripted grants),
+#   - the bank is told via event sm_events.1 (non-silent popup).
+# save_scope_as must be PERMANENT to survive into the event (CLAUDE.md).
+sm_nationalize_bank_stakes = {
+	save_scope_as = sm_nationalizer
+
+	if = {
+		limit = { var:sm_agriculture_stake_owner ?= scope:sm_bank }
+		remove_variable = sm_agriculture_stake_pct
+		remove_variable = sm_agriculture_stake_owner
+	}
+	if = {
+		limit = { var:sm_mining_stake_owner ?= scope:sm_bank }
+		remove_variable = sm_mining_stake_pct
+		remove_variable = sm_mining_stake_owner
+	}
+	if = {
+		limit = { var:sm_industry_stake_owner ?= scope:sm_bank }
+		remove_variable = sm_industry_stake_pct
+		remove_variable = sm_industry_stake_owner
+	}
+	if = {
+		limit = { var:sm_commerce_stake_owner ?= scope:sm_bank }
+		remove_variable = sm_commerce_stake_pct
+		remove_variable = sm_commerce_stake_owner
+	}
+
+	add_country_modifier = {
+		modifier = sm_nationalizer_stigma
+		years = 10
+	}
+
+	scope:sm_bank = {
+		remove_list_variable = {
+			name = sm_investment_targets
+			target = root
+		}
+		sm_refresh_portfolio_totals = yes
+		add_opinion = { target = root modifier = sm_opinion_nationalized_us }
+		add_casus_belli = {
+			type = casus_belli:cb_cut_down_in_size
+			target = root
+		}
+		trigger_event_non_silently = { id = sm_events.1 }
+	}
+}
+
 # Recompute the cached portfolio totals shown in the Investments window
 # header. Scope: the investor country. Walks the investor's
 # sm_investment_targets list and totals, per sector they own there:
-#   income = book x stake_pct x 0.006  (same formula as the dividend
-#            script values and the monthly payout — keep in sync)
+#   income = paying book x stake_pct x 0.006  (same formula as the
+#            dividend script values and the monthly payout — keep in
+#            sync). Paying book excludes the target's occupied
+#            locations (dividend suspension); falls back to full book
+#            until the target's first pulse writes the paying cache.
+#            Commerce has no paying variant — its book is income-based
+#            and shrinks under occupation on its own.
 #   value  = cached market value x stake_pct (what the holdings are
-#            worth at current market conditions)
+#            worth at current market conditions — full book basis,
+#            occupation does not discount it)
 # Reads only the target's cached vars (sm_X_book / sm_X_value, written
 # by its monthly pulse), so this is cheap: no location iteration. Called
 # from the monthly pulse and from every buy/sell interaction so the
@@ -30,6 +91,10 @@ sm_refresh_portfolio_totals = {
 					name = sm_portfolio_income
 					add = {
 						value = scope:sm_pf_target.var:sm_agriculture_book
+						if = {
+							limit = { scope:sm_pf_target = { exists = var:sm_agriculture_paying_book } }
+							value = scope:sm_pf_target.var:sm_agriculture_paying_book
+						}
 						multiply = scope:sm_pf_target.var:sm_agriculture_stake_pct
 						multiply = 0.006
 					}
@@ -54,6 +119,10 @@ sm_refresh_portfolio_totals = {
 					name = sm_portfolio_income
 					add = {
 						value = scope:sm_pf_target.var:sm_mining_book
+						if = {
+							limit = { scope:sm_pf_target = { exists = var:sm_mining_paying_book } }
+							value = scope:sm_pf_target.var:sm_mining_paying_book
+						}
 						multiply = scope:sm_pf_target.var:sm_mining_stake_pct
 						multiply = 0.006
 					}
@@ -78,6 +147,10 @@ sm_refresh_portfolio_totals = {
 					name = sm_portfolio_income
 					add = {
 						value = scope:sm_pf_target.var:sm_industry_book
+						if = {
+							limit = { scope:sm_pf_target = { exists = var:sm_industry_paying_book } }
+							value = scope:sm_pf_target.var:sm_industry_paying_book
+						}
 						multiply = scope:sm_pf_target.var:sm_industry_stake_pct
 						multiply = 0.006
 					}

@@ -1,0 +1,597 @@
+# Investments — the invested country asks to REPURCHASE a 10% tranche of its
+# own sector from the concession holder (the bank — the player in this SP mod).
+#
+# The "get the bank out" scale, polite end (DESIGN.md, Rob 2026-07-03):
+#  - AI-initiated only (ai_will_do); the bank receives the native offer popup:
+#    accept = concede (tranche returns, bank is paid), decline = refuse
+#    (relations penalty via reject_effect). The accept block exists solely to
+#    make this an OFFER; the player's choice is free.
+#  - Price: the actor's own sm_<sector>_buyback_price — the tranche's plain
+#    MARKET value (x0.10, no premium, no fees; Rob 2026-07-03: the purchase
+#    fee is for acquiring rights, not for a country reclaiming its own).
+#    Sits between the bank's voluntary sell price and a fresh purchase.
+#  - Reserve ladder: how flush the country must be before asking scales with
+#    how much it likes the bank — 4x the stake's market value when friendly,
+#    down to 1.5x when hostile. Below -50 opinion, nationalization (monthly
+#    pulse) becomes the real threat; at war they never ask, they seize.
+#  - Shared 3-year cooldown type sm_buyback_request: one ask per country per
+#    window across all four sectors. Engine cooldown fires only on ACCEPT
+#    (vanilla gotcha, catholic_interactions.txt) — reject_effect re-arms it.
+#  - ai_will_do reads ONLY cached vars (sm_<sector>_stake_market ->
+#    var:sm_<sector>_value); no location iteration in AI scoring.
+
+sm_buyback_agriculture_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	ai_tick = daily
+	ai_tick_frequency = 180
+
+	cooldown = {
+		type = sm_buyback_request
+		years = 3
+	}
+
+	potential = {
+		scope:actor = {
+			exists = var:sm_agriculture_stake_owner
+			var:sm_agriculture_stake_pct >= 0.1
+		}
+		scope:recipient ?= {
+			NOT = { this = scope:actor }
+			scope:actor = { var:sm_agriculture_stake_owner ?= prev }
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		# The only valid recipient is the concession holder.
+		ai_interaction_source_list = {
+			scope:actor = {
+				if = {
+					limit = { exists = var:sm_agriculture_stake_owner }
+					var:sm_agriculture_stake_owner = { add_to_list = source }
+				}
+			}
+		}
+		column = {
+			data = name
+		}
+		visible = {
+			scope:actor = { var:sm_agriculture_stake_owner ?= prev }
+		}
+	}
+
+	effect = {
+		scope:recipient = {
+			add_gold = scope:actor.sm_agriculture_buyback_price
+		}
+		scope:actor = {
+			add_gold = {
+				value = sm_agriculture_buyback_price
+				multiply = -1
+			}
+			change_variable = { name = sm_agriculture_stake_pct subtract = 0.1 }
+			if = {
+				limit = { var:sm_agriculture_stake_pct < 0.05 }
+				remove_variable = sm_agriculture_stake_pct
+				remove_variable = sm_agriculture_stake_owner
+			}
+		}
+		# Ledger bookkeeping on the bank: drop the row once no sector here
+		# is theirs any more (mirror of zz_sm_sell_stakes.txt).
+		scope:recipient = {
+			if = {
+				limit = {
+					scope:actor = {
+						NOT = { var:sm_agriculture_stake_owner ?= scope:recipient }
+						NOT = { var:sm_mining_stake_owner ?= scope:recipient }
+						NOT = { var:sm_industry_stake_owner ?= scope:recipient }
+						NOT = { var:sm_commerce_stake_owner ?= scope:recipient }
+					}
+				}
+				remove_list_variable = {
+					name = sm_investment_targets
+					target = scope:actor
+				}
+			}
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	accept = {
+		# Token: the bank is the player in this SP mod, so this number never
+		# decides anything — it only makes the interaction an offer.
+		add = { desc = "SM_ACCEPT_BUYBACK" value = 10 }
+	}
+
+	reject_effect = {
+		scope:actor = {
+			add_opinion = { target = scope:recipient modifier = sm_opinion_refused_buyback }
+			# Engine cooldown only applies on ACCEPT (vanilla gotcha,
+			# catholic_interactions.txt) — re-arm manually on refusal.
+			hidden_effect = {
+				add_cooldown = {
+					type = sm_buyback_request
+					years = 3
+				}
+			}
+		}
+	}
+
+	ai_will_do = {
+		# At war with the bank: never ask — seizure territory (monthly pulse).
+		if = {
+			limit = { scope:actor = { is_at_war_with = scope:recipient } }
+			add = -1000
+		}
+		# Friendly: only when flush — 4x the stake's market value.
+		if = {
+			limit = {
+				scope:actor = {
+					opinion = { target = scope:recipient value >= 100 }
+					gold >= { value = sm_agriculture_stake_market multiply = 4 }
+				}
+			}
+			add = 20
+		}
+		# Cordial: 3x.
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= 100 } }
+					opinion = { target = scope:recipient value >= 0 }
+					gold >= { value = sm_agriculture_stake_market multiply = 3 }
+				}
+			}
+			add = 20
+		}
+		# Sour: 2x.
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= 0 } }
+					opinion = { target = scope:recipient value >= -50 }
+					gold >= { value = sm_agriculture_stake_market multiply = 2 }
+				}
+			}
+			add = 25
+		}
+		# Hostile but solvent: 1.5x — last polite word before seizure.
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= -50 } }
+					gold >= { value = sm_agriculture_stake_market multiply = 1.5 }
+				}
+			}
+			add = 30
+		}
+	}
+}
+
+sm_buyback_mining_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	ai_tick = daily
+	ai_tick_frequency = 180
+
+	cooldown = {
+		type = sm_buyback_request
+		years = 3
+	}
+
+	potential = {
+		scope:actor = {
+			exists = var:sm_mining_stake_owner
+			var:sm_mining_stake_pct >= 0.1
+		}
+		scope:recipient ?= {
+			NOT = { this = scope:actor }
+			scope:actor = { var:sm_mining_stake_owner ?= prev }
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		ai_interaction_source_list = {
+			scope:actor = {
+				if = {
+					limit = { exists = var:sm_mining_stake_owner }
+					var:sm_mining_stake_owner = { add_to_list = source }
+				}
+			}
+		}
+		column = {
+			data = name
+		}
+		visible = {
+			scope:actor = { var:sm_mining_stake_owner ?= prev }
+		}
+	}
+
+	effect = {
+		scope:recipient = {
+			add_gold = scope:actor.sm_mining_buyback_price
+		}
+		scope:actor = {
+			add_gold = {
+				value = sm_mining_buyback_price
+				multiply = -1
+			}
+			change_variable = { name = sm_mining_stake_pct subtract = 0.1 }
+			if = {
+				limit = { var:sm_mining_stake_pct < 0.05 }
+				remove_variable = sm_mining_stake_pct
+				remove_variable = sm_mining_stake_owner
+			}
+		}
+		scope:recipient = {
+			if = {
+				limit = {
+					scope:actor = {
+						NOT = { var:sm_agriculture_stake_owner ?= scope:recipient }
+						NOT = { var:sm_mining_stake_owner ?= scope:recipient }
+						NOT = { var:sm_industry_stake_owner ?= scope:recipient }
+						NOT = { var:sm_commerce_stake_owner ?= scope:recipient }
+					}
+				}
+				remove_list_variable = {
+					name = sm_investment_targets
+					target = scope:actor
+				}
+			}
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	accept = {
+		add = { desc = "SM_ACCEPT_BUYBACK" value = 10 }
+	}
+
+	reject_effect = {
+		scope:actor = {
+			add_opinion = { target = scope:recipient modifier = sm_opinion_refused_buyback }
+			hidden_effect = {
+				add_cooldown = {
+					type = sm_buyback_request
+					years = 3
+				}
+			}
+		}
+	}
+
+	ai_will_do = {
+		if = {
+			limit = { scope:actor = { is_at_war_with = scope:recipient } }
+			add = -1000
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					opinion = { target = scope:recipient value >= 100 }
+					gold >= { value = sm_mining_stake_market multiply = 4 }
+				}
+			}
+			add = 20
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= 100 } }
+					opinion = { target = scope:recipient value >= 0 }
+					gold >= { value = sm_mining_stake_market multiply = 3 }
+				}
+			}
+			add = 20
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= 0 } }
+					opinion = { target = scope:recipient value >= -50 }
+					gold >= { value = sm_mining_stake_market multiply = 2 }
+				}
+			}
+			add = 25
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= -50 } }
+					gold >= { value = sm_mining_stake_market multiply = 1.5 }
+				}
+			}
+			add = 30
+		}
+	}
+}
+
+sm_buyback_industry_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	ai_tick = daily
+	ai_tick_frequency = 180
+
+	cooldown = {
+		type = sm_buyback_request
+		years = 3
+	}
+
+	potential = {
+		scope:actor = {
+			exists = var:sm_industry_stake_owner
+			var:sm_industry_stake_pct >= 0.1
+		}
+		scope:recipient ?= {
+			NOT = { this = scope:actor }
+			scope:actor = { var:sm_industry_stake_owner ?= prev }
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		ai_interaction_source_list = {
+			scope:actor = {
+				if = {
+					limit = { exists = var:sm_industry_stake_owner }
+					var:sm_industry_stake_owner = { add_to_list = source }
+				}
+			}
+		}
+		column = {
+			data = name
+		}
+		visible = {
+			scope:actor = { var:sm_industry_stake_owner ?= prev }
+		}
+	}
+
+	effect = {
+		scope:recipient = {
+			add_gold = scope:actor.sm_industry_buyback_price
+		}
+		scope:actor = {
+			add_gold = {
+				value = sm_industry_buyback_price
+				multiply = -1
+			}
+			change_variable = { name = sm_industry_stake_pct subtract = 0.1 }
+			if = {
+				limit = { var:sm_industry_stake_pct < 0.05 }
+				remove_variable = sm_industry_stake_pct
+				remove_variable = sm_industry_stake_owner
+			}
+		}
+		scope:recipient = {
+			if = {
+				limit = {
+					scope:actor = {
+						NOT = { var:sm_agriculture_stake_owner ?= scope:recipient }
+						NOT = { var:sm_mining_stake_owner ?= scope:recipient }
+						NOT = { var:sm_industry_stake_owner ?= scope:recipient }
+						NOT = { var:sm_commerce_stake_owner ?= scope:recipient }
+					}
+				}
+				remove_list_variable = {
+					name = sm_investment_targets
+					target = scope:actor
+				}
+			}
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	accept = {
+		add = { desc = "SM_ACCEPT_BUYBACK" value = 10 }
+	}
+
+	reject_effect = {
+		scope:actor = {
+			add_opinion = { target = scope:recipient modifier = sm_opinion_refused_buyback }
+			hidden_effect = {
+				add_cooldown = {
+					type = sm_buyback_request
+					years = 3
+				}
+			}
+		}
+	}
+
+	ai_will_do = {
+		if = {
+			limit = { scope:actor = { is_at_war_with = scope:recipient } }
+			add = -1000
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					opinion = { target = scope:recipient value >= 100 }
+					gold >= { value = sm_industry_stake_market multiply = 4 }
+				}
+			}
+			add = 20
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= 100 } }
+					opinion = { target = scope:recipient value >= 0 }
+					gold >= { value = sm_industry_stake_market multiply = 3 }
+				}
+			}
+			add = 20
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= 0 } }
+					opinion = { target = scope:recipient value >= -50 }
+					gold >= { value = sm_industry_stake_market multiply = 2 }
+				}
+			}
+			add = 25
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= -50 } }
+					gold >= { value = sm_industry_stake_market multiply = 1.5 }
+				}
+			}
+			add = 30
+		}
+	}
+}
+
+sm_buyback_commerce_stake = {
+	category = CATEGORY_ECONOMY_ACTIONS
+	type = diplomacy
+	use_enroute = no
+
+	ai_tick = daily
+	ai_tick_frequency = 180
+
+	cooldown = {
+		type = sm_buyback_request
+		years = 3
+	}
+
+	potential = {
+		scope:actor = {
+			exists = var:sm_commerce_stake_owner
+			var:sm_commerce_stake_pct >= 0.1
+		}
+		scope:recipient ?= {
+			NOT = { this = scope:actor }
+			scope:actor = { var:sm_commerce_stake_owner ?= prev }
+		}
+	}
+
+	select_trigger = {
+		looking_for_a = country
+		target_flag = recipient
+		name = "choose_country"
+		ai_interaction_source_list = {
+			scope:actor = {
+				if = {
+					limit = { exists = var:sm_commerce_stake_owner }
+					var:sm_commerce_stake_owner = { add_to_list = source }
+				}
+			}
+		}
+		column = {
+			data = name
+		}
+		visible = {
+			scope:actor = { var:sm_commerce_stake_owner ?= prev }
+		}
+	}
+
+	effect = {
+		scope:recipient = {
+			add_gold = scope:actor.sm_commerce_buyback_price
+		}
+		scope:actor = {
+			add_gold = {
+				value = sm_commerce_buyback_price
+				multiply = -1
+			}
+			change_variable = { name = sm_commerce_stake_pct subtract = 0.1 }
+			if = {
+				limit = { var:sm_commerce_stake_pct < 0.05 }
+				remove_variable = sm_commerce_stake_pct
+				remove_variable = sm_commerce_stake_owner
+			}
+		}
+		scope:recipient = {
+			if = {
+				limit = {
+					scope:actor = {
+						NOT = { var:sm_agriculture_stake_owner ?= scope:recipient }
+						NOT = { var:sm_mining_stake_owner ?= scope:recipient }
+						NOT = { var:sm_industry_stake_owner ?= scope:recipient }
+						NOT = { var:sm_commerce_stake_owner ?= scope:recipient }
+					}
+				}
+				remove_list_variable = {
+					name = sm_investment_targets
+					target = scope:actor
+				}
+			}
+			sm_refresh_portfolio_totals = yes
+		}
+	}
+
+	accept = {
+		add = { desc = "SM_ACCEPT_BUYBACK" value = 10 }
+	}
+
+	reject_effect = {
+		scope:actor = {
+			add_opinion = { target = scope:recipient modifier = sm_opinion_refused_buyback }
+			hidden_effect = {
+				add_cooldown = {
+					type = sm_buyback_request
+					years = 3
+				}
+			}
+		}
+	}
+
+	ai_will_do = {
+		if = {
+			limit = { scope:actor = { is_at_war_with = scope:recipient } }
+			add = -1000
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					opinion = { target = scope:recipient value >= 100 }
+					gold >= { value = sm_commerce_stake_market multiply = 4 }
+				}
+			}
+			add = 20
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= 100 } }
+					opinion = { target = scope:recipient value >= 0 }
+					gold >= { value = sm_commerce_stake_market multiply = 3 }
+				}
+			}
+			add = 20
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= 0 } }
+					opinion = { target = scope:recipient value >= -50 }
+					gold >= { value = sm_commerce_stake_market multiply = 2 }
+				}
+			}
+			add = 25
+		}
+		if = {
+			limit = {
+				scope:actor = {
+					NOT = { opinion = { target = scope:recipient value >= -50 } }
+					gold >= { value = sm_commerce_stake_market multiply = 1.5 }
+				}
+			}
+			add = 30
+		}
+	}
+}

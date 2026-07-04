@@ -1,0 +1,15 @@
+# Investments — static country modifiers (schema: banking mod
+# banking_modifiers.txt; value scales verified against vanilla
+# country.txt: improve_relation_impact is a fraction, diplomatic_reputation
+# a flat point value).
+
+# The diplomatic stigma of seizing foreign-held concessions. Applied for
+# 10 years by sm_nationalize_bank_stakes. Word travels: nobody improves
+# relations with a confiscator cheaply, and their word is worth less.
+sm_nationalizer_stigma = {
+	game_data = {
+		category = country
+	}
+	improve_relation_impact = -0.25
+	diplomatic_reputation = -2
+}
